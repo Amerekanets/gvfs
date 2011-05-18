@@ -1,0 +1,176 @@
+<!DOCTYPE node PUBLIC
+"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"
+"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">
+
+<!--
+ Copyright (C) 2011 Red Hat, Inc.
+
+ This library is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Lesser General Public
+ License as published by the Free Software Foundation; either
+ version 2 of the License, or (at your option) any later version.
+
+ This library is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ Lesser General Public License for more details.
+
+ You should have received a copy of the GNU Lesser General
+ Public License along with this library; if not, write to the
+ Free Software Foundation, Inc., 59 Temple Place, Suite 330,
+ Boston, MA 02111-1307, USA.
+
+ Author: Tomas Bzatek <tbzatek@redhat.com>
+-->
+
+<node name="/" xmlns:doc="http://www.freedesktop.org/dbus/1.0/doc.dtd">
+  <interface name='org.gtk.Private.RemoteVolumeMonitor'>
+
+    <!--  GIO side  -->
+    <signal name="DriveChanged">
+      <arg type='s' name='TheDBusName'/>
+      <arg type='s' name='Id'/>
+      <arg type='(sssbbbbbbbbuasa{ss})' name='Drive'/>
+    </signal>
+    <signal name="DriveConnected">
+      <arg type='s' name='TheDBusName'/>
+      <arg type='s' name='Id'/>
+      <arg type='(sssbbbbbbbbuasa{ss})' name='Drive'/>
+    </signal>
+    <signal name="DriveDisconnected">
+      <arg type='s' name='TheDBusName'/>
+      <arg type='s' name='Id'/>
+      <arg type='(sssbbbbbbbbuasa{ss})' name='Drive'/> 
+    </signal>
+    <signal name="DriveEjectButton">
+      <arg type='s' name='TheDBusName'/>
+      <arg type='s' name='Id'/>
+      <arg type='(sssbbbbbbbbuasa{ss})' name='Drive'/>
+    </signal>
+    <signal name="DriveStopButton">
+      <arg type='s' name='TheDBusName'/>
+      <arg type='s' name='Id'/>
+      <arg type='(sssbbbbbbbbuasa{ss})' name='Drive'/> 
+    </signal>
+    <signal name="VolumeChanged">
+      <arg type='s' name='TheDBusName'/>
+      <arg type='s' name='Id'/>
+      <arg type='(sssssbbssa{ss})' name='Volume'/>
+    </signal>
+    <signal name="VolumeAdded">
+      <arg type='s' name='TheDBusName'/>
+      <arg type='s' name='Id'/>
+      <arg type='(sssssbbssa{ss})' name='Volume'/>
+    </signal>
+    <signal name="VolumeRemoved">
+      <arg type='s' name='TheDBusName'/>
+      <arg type='s' name='Id'/>
+      <arg type='(sssssbbssa{ss})' name='Volume'/>
+    </signal>
+    <signal name="MountChanged">
+      <arg type='s' name='TheDBusName'/>
+      <arg type='s' name='Id'/>
+      <arg type='(sssssbsas)' name='Mount'/>
+    </signal>
+    <signal name="MountAdded">
+      <arg type='s' name='TheDBusName'/>
+      <arg type='s' name='Id'/>
+      <arg type='(sssssbsas)' name='Mount'/>
+    </signal>
+    <signal name="MountPreUnmount">
+      <arg type='s' name='TheDBusName'/>
+      <arg type='s' name='Id'/>
+      <arg type='(sssssbsas)' name='Mount'/> 
+    </signal>
+    <signal name="MountRemoved">
+      <arg type='s' name='TheDBusName'/>
+      <arg type='s' name='Id'/>
+      <arg type='(sssssbsas)' name='Mount'/> 
+    </signal>
+    <method name="MountOpAskPassword">
+      <arg type='s' name='TheDBusName' direction='in'/>
+      <arg type='s' name='Id' direction='in'/>
+      <arg type='s' name='MessageToShow' direction='in'/>
+      <arg type='s' name='DefaultUser' direction='in'/>
+      <arg type='s' name='DefaultDomain' direction='in'/>
+      <arg type='u' name='Flags' direction='in'/>
+    </method>
+    <method name="MountOpAskQuestion">
+      <arg type='s' name='TheDBusName' direction='in'/>
+      <arg type='s' name='Id' direction='in'/>
+      <arg type='s' name='MessageToShow' direction='in'/>
+      <arg type='as' name='Choices' direction='in'/>
+    </method>
+    <method name="MountOpShowProcesses">
+      <arg type='s' name='TheDBusName' direction='in'/>
+      <arg type='s' name='Id' direction='in'/>
+      <arg type='s' name='MessageToShow' direction='in'/>
+      <arg type='ai' name='Pid' direction='in'/>
+      <arg type='as' name='Choices' direction='in'/>
+    </method>
+    <method name="MountOpAborted">
+      <arg type='s' name='TheDBusName' direction='in'/>
+      <arg type='s' name='Id' direction='in'/>
+    </method>
+
+
+    <!--  Particular volume monitor implementations  -->
+    <method name="IsSupported">
+      <arg type='b' name='IsSupported' direction='out'/>
+    </method>
+    <method name="List">
+      <arg type='a(sssbbbbbbbbuasa{ss})' name='Drives' direction='out'/>
+      <arg type='a(sssssbbssa{ss})' name='Volumes' direction='out'/>
+      <arg type='a(sssssbsas)' name='Mounts' direction='out'/>
+    </method>
+    <method name="CancelOperation">
+      <arg type='s' name='CancellationId' direction='in'/>
+      <arg type='b' name='WasCancelled' direction='out'/>
+    </method>
+    <method name="MountUnmount">
+      <arg type='s' name='Id' direction='in'/>
+      <arg type='s' name='CancellationId' direction='in'/>
+      <arg type='u' name='UnmountFlags' direction='in'/>
+      <arg type='s' name='MountOpId' direction='in'/>
+    </method>
+    <method name="VolumeMount">
+      <arg type='s' name='Id' direction='in'/>
+      <arg type='s' name='CancellationId' direction='in'/>
+      <arg type='u' name='MountFlags' direction='in'/>
+      <arg type='s' name='MountOpId' direction='in'/>
+    </method>
+    <method name="DriveEject">
+      <arg type='s' name='Id' direction='in'/>
+      <arg type='s' name='CancellationId' direction='in'/>
+      <arg type='u' name='UnmountFlags' direction='in'/>
+      <arg type='s' name='MountOpId' direction='in'/>
+    </method>
+    <method name="DrivePollForMedia">
+      <arg type='s' name='Id' direction='in'/>
+      <arg type='s' name='CancellationId' direction='in'/>
+    </method>
+    <method name="DriveStart">
+      <arg type='s' name='Id' direction='in'/>
+      <arg type='s' name='CancellationId' direction='in'/>
+      <arg type='u' name='Flags' direction='in'/>
+      <arg type='s' name='MountOpId' direction='in'/>
+    </method>
+    <method name="DriveStop">
+      <arg type='s' name='Id' direction='in'/>
+      <arg type='s' name='CancellationId' direction='in'/>
+      <arg type='u' name='UnmountFlags' direction='in'/>
+      <arg type='s' name='MountOpId' direction='in'/>
+    </method>
+    <method name="MountOpReply">
+      <arg type='s' name='MountOpId' direction='in'/>
+      <arg type='i' name='Result' direction='in'/>
+      <arg type='s' name='UserName' direction='in'/>
+      <arg type='s' name='Domain' direction='in'/>
+      <arg type='s' name='EncodedPassword' direction='in'/>
+      <arg type='i' name='PasswordSave' direction='in'/>
+      <arg type='i' name='Choice' direction='in'/>
+      <arg type='b' name='Anonymous' direction='in'/>
+    </method>
+  </interface>
+</node>
+
