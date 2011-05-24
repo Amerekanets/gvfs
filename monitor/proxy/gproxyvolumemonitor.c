@@ -779,10 +779,10 @@ filter_function (DBusConnection *connection, DBusMessage *message, void *user_da
             }
         }
     }
-  else if (dbus_message_is_method_call (message, "org.gtk.Private.RemoteVolumeMonitor", "MountOpAskPassword") ||
-           dbus_message_is_method_call (message, "org.gtk.Private.RemoteVolumeMonitor", "MountOpAskQuestion") ||
-           dbus_message_is_method_call (message, "org.gtk.Private.RemoteVolumeMonitor", "MountOpShowProcesses") ||
-           dbus_message_is_method_call (message, "org.gtk.Private.RemoteVolumeMonitor", "MountOpAborted"))
+  else if (dbus_message_is_signal (message, "org.gtk.Private.RemoteVolumeMonitor", "MountOpAskPassword") ||
+           dbus_message_is_signal (message, "org.gtk.Private.RemoteVolumeMonitor", "MountOpAskQuestion") ||
+           dbus_message_is_signal (message, "org.gtk.Private.RemoteVolumeMonitor", "MountOpShowProcesses") ||
+           dbus_message_is_signal (message, "org.gtk.Private.RemoteVolumeMonitor", "MountOpAborted"))
     {
       dbus_message_iter_init (message, &iter);
       dbus_message_iter_get_basic (&iter, &the_dbus_name);

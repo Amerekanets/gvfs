@@ -87,31 +87,31 @@
       <arg type='s' name='Id'/>
       <arg type='(sssssbsassa{sv})' name='Mount'/> 
     </signal>
-    <method name="MountOpAskPassword">
-      <arg type='s' name='TheDBusName' direction='in'/>
-      <arg type='s' name='Id' direction='in'/>
-      <arg type='s' name='MessageToShow' direction='in'/>
-      <arg type='s' name='DefaultUser' direction='in'/>
-      <arg type='s' name='DefaultDomain' direction='in'/>
-      <arg type='u' name='Flags' direction='in'/>
-    </method>
-    <method name="MountOpAskQuestion">
-      <arg type='s' name='TheDBusName' direction='in'/>
-      <arg type='s' name='Id' direction='in'/>
-      <arg type='s' name='MessageToShow' direction='in'/>
-      <arg type='as' name='Choices' direction='in'/>
-    </method>
-    <method name="MountOpShowProcesses">
-      <arg type='s' name='TheDBusName' direction='in'/>
-      <arg type='s' name='Id' direction='in'/>
-      <arg type='s' name='MessageToShow' direction='in'/>
-      <arg type='ai' name='Pid' direction='in'/>
-      <arg type='as' name='Choices' direction='in'/>
-    </method>
-    <method name="MountOpAborted">
-      <arg type='s' name='TheDBusName' direction='in'/>
-      <arg type='s' name='Id' direction='in'/>
-    </method>
+    <signal name="MountOpAskPassword">
+      <arg type='s' name='TheDBusName'/>
+      <arg type='s' name='Id'/>
+      <arg type='s' name='MessageToShow'/>
+      <arg type='s' name='DefaultUser'/>
+      <arg type='s' name='DefaultDomain'/>
+      <arg type='u' name='Flags'/>
+    </signal>
+    <signal name="MountOpAskQuestion">
+      <arg type='s' name='TheDBusName'/>
+      <arg type='s' name='Id'/>
+      <arg type='s' name='MessageToShow'/>
+      <arg type='as' name='Choices'/>
+    </signal>
+    <signal name="MountOpShowProcesses">
+      <arg type='s' name='TheDBusName'/>
+      <arg type='s' name='Id'/>
+      <arg type='s' name='MessageToShow'/>
+      <arg type='ai' name='Pid'/>
+      <arg type='as' name='Choices'/>
+    </signal>
+    <signal name="MountOpAborted">
+      <arg type='s' name='TheDBusName'/>
+      <arg type='s' name='Id'/>
+    </signal>
 
 
     <!--  Particular volume monitor implementations  -->

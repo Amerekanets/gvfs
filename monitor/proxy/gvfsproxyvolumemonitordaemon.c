@@ -140,55 +140,21 @@ g_proxy_mount_operation_class_init (GProxyMountOperationClass *klass)
   mount_op_class->show_processes = g_proxy_mount_operation_show_processes;
 }
 
-
-static gboolean
-create_proxy (const gchar *mount_op_owner, GVfsRemoteVolumeMonitor **proxy)
-{
-  GError *error = NULL;
-
-  *proxy = gvfs_remote_volume_monitor_proxy_new_for_bus_sync (G_BUS_TYPE_SESSION,
-                                                              G_DBUS_PROXY_FLAGS_NONE,
-                                                              mount_op_owner,
-                                                              "/org/gtk/Private/RemoteVolumeMonitor",
-                                                              NULL,
-                                                              &error);
-  if (*proxy == NULL)
-    {
-      g_printerr ("Error creating proxy: %s (%s, %d)\n",
-                  error->message, g_quark_to_string (error->domain), error->code);
-      g_error_free (error);
-      return FALSE;
-    }
-
-  return TRUE;
-}
-
 static void
-ask_password_cb_cb (GVfsRemoteVolumeMonitor *proxy, GAsyncResult *res, gpointer user_data)
-{
-  print_debug ("in ask_password_cb_cb");
-  gvfs_remote_volume_monitor_call_mount_op_ask_password_finish (proxy, res, NULL);
-}
-
-static void
-ask_password_cb (GMountOperation  *mount_operation,
-                 const gchar      *message_to_show,
-                 const gchar      *default_user,
-                 const gchar      *default_domain,
-                 GAskPasswordFlags flags,
-                 gpointer          user_data)
+ask_password_cb (GMountOperation          *mount_operation,
+                 const gchar              *message_to_show,
+                 const gchar              *default_user,
+                 const gchar              *default_domain,
+                 GAskPasswordFlags         flags,
+                 GVfsRemoteVolumeMonitor  *monitor)
 {
   const gchar *mount_op_id;
   const gchar *mount_op_owner;
-  GVfsRemoteVolumeMonitor *proxy;
 
   print_debug ("in ask_password_cb %s", message_to_show);
 
   mount_op_id = g_object_get_data (G_OBJECT (mount_operation), "mount_op_id");
   mount_op_owner = g_object_get_data (G_OBJECT (mount_operation), "mount_op_owner");
-
-  if (!create_proxy (mount_op_owner, &proxy))
-    return;
 
   if (message_to_show == NULL)
     message_to_show = "";
@@ -199,77 +165,52 @@ ask_password_cb (GMountOperation  *mount_operation,
   if (default_domain == NULL)
     default_domain = "";
 
-  gvfs_remote_volume_monitor_call_mount_op_ask_password (proxy,
+  /* TODO: send the signal only to the appropriate owner (mount_op_owner) */
+  gvfs_remote_volume_monitor_emit_mount_op_ask_password (monitor,
                                                          the_dbus_name,
                                                          mount_op_id,
                                                          message_to_show,
                                                          default_user,
                                                          default_domain,
-                                                         flags,
-                                                         NULL,
-                                                         (GAsyncReadyCallback) ask_password_cb_cb,
-                                                         NULL);
-  g_object_unref (proxy);
+                                                         flags);
 }
 
 static void
-ask_question_cb_cb (GVfsRemoteVolumeMonitor *proxy, GAsyncResult *res, gpointer user_data)
-{
-  print_debug ("in ask_question_cb_cb");
-  gvfs_remote_volume_monitor_call_mount_op_ask_question_finish (proxy, res, NULL);
-}
-
-static void
-ask_question_cb (GMountOperation  *mount_operation,
-                 const gchar      *message_to_show,
-                 gchar           **choices,
-                 gpointer          user_data)
+ask_question_cb (GMountOperation          *mount_operation,
+                 const gchar              *message_to_show,
+                 gchar                   **choices,
+                 GVfsRemoteVolumeMonitor  *monitor)
 {
   const gchar *mount_op_id;
   const gchar *mount_op_owner;
-  GVfsRemoteVolumeMonitor *proxy;
 
   print_debug ("in ask_question_cb %s", message_to_show);
 
   mount_op_id = g_object_get_data (G_OBJECT (mount_operation), "mount_op_id");
   mount_op_owner = g_object_get_data (G_OBJECT (mount_operation), "mount_op_owner");
 
-  if (!create_proxy (mount_op_owner, &proxy))
-    return;
-  
   if (message_to_show == NULL)
     message_to_show = "";
 
-  gvfs_remote_volume_monitor_call_mount_op_ask_question (proxy,
+  /* TODO: send the signal only to the appropriate owner (mount_op_owner) */
+  gvfs_remote_volume_monitor_emit_mount_op_ask_question (monitor,
                                                          the_dbus_name,
                                                          mount_op_id,
                                                          message_to_show,
-                                                         (const gchar *const *) choices,
-                                                         NULL,
-                                                         (GAsyncReadyCallback) ask_question_cb_cb,
-                                                         NULL);
-  g_object_unref (proxy);
+                                                         (const gchar *const *) choices);
 }
 
 static void
-show_processes_cb_cb (GVfsRemoteVolumeMonitor *proxy, GAsyncResult *res, gpointer user_data)
-{
-  print_debug ("in show_processes_cb_cb");
-  gvfs_remote_volume_monitor_call_mount_op_aborted_finish (proxy, res, NULL);
-}
-
-static void
-show_processes_cb (GMountOperation  *mount_operation,
-                   const gchar      *message_to_show,
-                   GArray           *processes,
-                   gchar           **choices,
-                   gpointer          user_data)
+show_processes_cb (GMountOperation          *mount_operation,
+                   const gchar              *message_to_show,
+                   GArray                   *processes,
+                   gchar                   **choices,
+                   GVfsRemoteVolumeMonitor  *monitor)
 {
   const gchar *mount_op_id;
   const gchar *mount_op_owner;
   guint n;
   GVariantBuilder *pids;
-  GVfsRemoteVolumeMonitor *proxy;
 
   print_debug ("in show_processes_cb %s", message_to_show);
 
@@ -277,9 +218,6 @@ show_processes_cb (GMountOperation  *mount_operation,
   mount_op_owner = g_object_get_data (G_OBJECT (mount_operation), "mount_op_owner");
 
   print_debug ("  owner =  '%s'", mount_op_owner);
-
-  if (!create_proxy (mount_op_owner, &proxy))
-    return;
 
   if (message_to_show == NULL)
     message_to_show = "";
@@ -291,51 +229,33 @@ show_processes_cb (GMountOperation  *mount_operation,
       pid = g_array_index (processes, GPid, n);
       g_variant_builder_add (pids, "i", pid);
     }
- 
-  gvfs_remote_volume_monitor_call_mount_op_show_processes (proxy,
+
+  /* TODO: send the signal only to the appropriate owner (mount_op_owner) */
+  gvfs_remote_volume_monitor_emit_mount_op_show_processes (monitor,
                                                            the_dbus_name,
                                                            mount_op_id,
                                                            message_to_show,
                                                            g_variant_builder_end (pids),
-                                                           (const gchar *const *) choices,
-                                                           NULL,
-                                                           (GAsyncReadyCallback) show_processes_cb_cb,
-                                                           NULL);
+                                                           (const gchar *const *) choices);
   g_variant_builder_unref (pids);
-  g_object_unref (proxy);
-}
-
-
-static void
-aborted_cb_cb (GVfsRemoteVolumeMonitor *proxy, GAsyncResult *res, gpointer user_data)
-{
-  print_debug ("in aborted_cb_cb");
-  gvfs_remote_volume_monitor_call_mount_op_aborted_finish (proxy, res, NULL);
 }
 
 static void
-aborted_cb (GMountOperation  *mount_operation,
-            gpointer          user_data)
+aborted_cb (GMountOperation         *mount_operation,
+            GVfsRemoteVolumeMonitor *monitor)
 {
   const gchar *mount_op_id;
   const gchar *mount_op_owner;
-  GVfsRemoteVolumeMonitor *proxy;
   
   print_debug ("in aborted_cb");
 
   mount_op_id = g_object_get_data (G_OBJECT (mount_operation), "mount_op_id");
   mount_op_owner = g_object_get_data (G_OBJECT (mount_operation), "mount_op_owner");
 
-  if (!create_proxy (mount_op_owner, &proxy))
-    return;
-
-  gvfs_remote_volume_monitor_call_mount_op_aborted (proxy,
+  /* TODO: send the signal only to the appropriate owner (mount_op_owner) */
+  gvfs_remote_volume_monitor_emit_mount_op_aborted (monitor_daemon,
                                                     the_dbus_name,
-                                                    mount_op_id,
-                                                    NULL,
-                                                    (GAsyncReadyCallback) aborted_cb_cb,
-                                                    NULL);
-  g_object_unref (proxy);
+                                                    mount_op_id);
 }
 
 static void
@@ -349,16 +269,17 @@ mount_op_destroyed_cb (gpointer user_data,
 
 static GMountOperation *
 wrap_mount_op (const gchar *mount_op_id,
-               const gchar *mount_op_owner)
+               const gchar *mount_op_owner,
+               GVfsRemoteVolumeMonitor *monitor)
 {
   GMountOperation *op;
 
   op = g_proxy_mount_operation_new ();
   //op = g_mount_operation_new ();
-  g_signal_connect (op, "ask-password", G_CALLBACK (ask_password_cb), NULL);
-  g_signal_connect (op, "ask-question", G_CALLBACK (ask_question_cb), NULL);
-  g_signal_connect (op, "show-processes", G_CALLBACK (show_processes_cb), NULL);
-  g_signal_connect (op, "aborted", G_CALLBACK (aborted_cb), NULL);
+  g_signal_connect (op, "ask-password", G_CALLBACK (ask_password_cb), monitor);
+  g_signal_connect (op, "ask-question", G_CALLBACK (ask_question_cb), monitor);
+  g_signal_connect (op, "show-processes", G_CALLBACK (show_processes_cb), monitor);
+  g_signal_connect (op, "aborted", G_CALLBACK (aborted_cb), monitor);
   g_object_set_data_full (G_OBJECT (op), "mount_op_id", g_strdup (mount_op_id), g_free);
   g_object_set_data_full (G_OBJECT (op), "mount_op_owner", g_strdup (mount_op_owner), g_free);
 
@@ -980,7 +901,7 @@ handle_mount_unmount (GVfsRemoteVolumeMonitor *object,
   mount_operation = NULL;
   if (MountOpId != NULL && strlen (MountOpId) > 0)
     {
-      mount_operation = wrap_mount_op (MountOpId, sender);
+      mount_operation = wrap_mount_op (MountOpId, sender, object);
       g_object_set_data_full (G_OBJECT (mount), "mount_operation", mount_operation, g_object_unref);
     }
 
@@ -1153,7 +1074,7 @@ handle_volume_mount (GVfsRemoteVolumeMonitor *object,
   mount_operation = NULL;
   if (MountOpId != NULL && strlen (MountOpId) > 0)
     {
-      mount_operation = wrap_mount_op (MountOpId, sender);
+      mount_operation = wrap_mount_op (MountOpId, sender, object);
       g_object_set_data_full (G_OBJECT (volume), "mount_operation", mount_operation, g_object_unref);
     }
 
@@ -1275,7 +1196,7 @@ handle_drive_eject (GVfsRemoteVolumeMonitor *object,
   mount_operation = NULL;
   if (MountOpId != NULL && strlen (MountOpId) > 0)
     {
-      mount_operation = wrap_mount_op (MountOpId, sender);
+      mount_operation = wrap_mount_op (MountOpId, sender, object);
       g_object_set_data_full (G_OBJECT (drive), "mount_operation", mount_operation, g_object_unref);
     }
 
@@ -1386,7 +1307,7 @@ handle_drive_stop (GVfsRemoteVolumeMonitor *object,
   mount_operation = NULL;
   if (MountOpId != NULL && strlen (MountOpId) > 0)
     {
-      mount_operation = wrap_mount_op (MountOpId, sender);
+      mount_operation = wrap_mount_op (MountOpId, sender, object);
       g_object_set_data_full (G_OBJECT (drive), "mount_operation", mount_operation, g_object_unref);
     }
 
@@ -1486,7 +1407,7 @@ handle_drive_start (GVfsRemoteVolumeMonitor *object,
   mount_operation = NULL;
   if (MountOpId != NULL && strlen (MountOpId) > 0)
     {
-      mount_operation = wrap_mount_op (MountOpId, sender);
+      mount_operation = wrap_mount_op (MountOpId, sender, object);
       g_object_set_data_full (G_OBJECT (drive), "mount_operation", mount_operation, g_object_unref);
     }
 
