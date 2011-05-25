@@ -150,6 +150,8 @@ ask_password_cb (GMountOperation          *mount_operation,
 {
   const gchar *mount_op_id;
   const gchar *mount_op_owner;
+  GDBusConnection *connection;
+  GError *error;
 
   print_debug ("in ask_password_cb %s", message_to_show);
 
@@ -165,14 +167,40 @@ ask_password_cb (GMountOperation          *mount_operation,
   if (default_domain == NULL)
     default_domain = "";
 
-  /* TODO: send the signal only to the appropriate owner (mount_op_owner) */
-  gvfs_remote_volume_monitor_emit_mount_op_ask_password (monitor,
-                                                         the_dbus_name,
-                                                         mount_op_id,
-                                                         message_to_show,
-                                                         default_user,
-                                                         default_domain,
-                                                         flags);
+  error = NULL;
+  connection = g_bus_get_sync (G_BUS_TYPE_SESSION, NULL, &error);
+  if (connection == NULL)
+    {
+      g_printerr ("Error getting session bus: %s (%s, %d)\n",
+                  error->message, g_quark_to_string (error->domain), error->code);
+      g_error_free (error);
+      goto out;
+    }
+  
+  error = NULL;
+  if (!g_dbus_connection_emit_signal (connection,
+                                      mount_op_owner,
+                                      "/org/gtk/Private/RemoteVolumeMonitor",
+                                      "org.gtk.Private.RemoteVolumeMonitor",
+                                      "MountOpAskPassword",
+                                      g_variant_new ("(sssssu)",
+                                                     the_dbus_name,
+                                                     mount_op_id,
+                                                     message_to_show,
+                                                     default_user,
+                                                     default_domain,
+                                                     flags),
+                                      &error))
+    {
+      g_printerr ("Error emitting signal: %s (%s, %d)\n",
+                  error->message, g_quark_to_string (error->domain), error->code);
+      g_error_free (error);
+      goto out;
+    }
+
+  out:
+   if (connection != NULL)
+     g_object_unref (connection);
 }
 
 static void
@@ -183,6 +211,10 @@ ask_question_cb (GMountOperation          *mount_operation,
 {
   const gchar *mount_op_id;
   const gchar *mount_op_owner;
+  guint n;
+  GVariantBuilder *choices_array;
+  GDBusConnection *connection;
+  GError *error;
 
   print_debug ("in ask_question_cb %s", message_to_show);
 
@@ -192,12 +224,45 @@ ask_question_cb (GMountOperation          *mount_operation,
   if (message_to_show == NULL)
     message_to_show = "";
 
-  /* TODO: send the signal only to the appropriate owner (mount_op_owner) */
-  gvfs_remote_volume_monitor_emit_mount_op_ask_question (monitor,
-                                                         the_dbus_name,
-                                                         mount_op_id,
-                                                         message_to_show,
-                                                         (const gchar *const *) choices);
+  choices_array = g_variant_builder_new (G_VARIANT_TYPE_STRING_ARRAY);
+  for (n = 0; choices != NULL && choices[n] != NULL; n++)
+    {
+      g_variant_builder_add (choices_array, "s", choices[n]);
+    }
+
+  error = NULL;
+  connection = g_bus_get_sync (G_BUS_TYPE_SESSION, NULL, &error);
+  if (connection == NULL)
+    {
+      g_printerr ("Error getting session bus: %s (%s, %d)\n",
+                  error->message, g_quark_to_string (error->domain), error->code);
+      g_error_free (error);
+      goto out;
+    }
+  
+  error = NULL;
+  if (!g_dbus_connection_emit_signal (connection,
+                                      mount_op_owner,
+                                      "/org/gtk/Private/RemoteVolumeMonitor",
+                                      "org.gtk.Private.RemoteVolumeMonitor",
+                                      "MountOpAskQuestion",
+                                      g_variant_new ("(sssas)",
+                                                     the_dbus_name,
+                                                     mount_op_id,
+                                                     message_to_show,
+                                                     choices_array),
+                                      &error))
+    {
+      g_printerr ("Error emitting signal: %s (%s, %d)\n",
+                  error->message, g_quark_to_string (error->domain), error->code);
+      g_error_free (error);
+      goto out;
+    }
+
+  out:
+   g_variant_builder_unref (choices_array);
+   if (connection != NULL)
+     g_object_unref (connection);
 }
 
 static void
@@ -211,6 +276,9 @@ show_processes_cb (GMountOperation          *mount_operation,
   const gchar *mount_op_owner;
   guint n;
   GVariantBuilder *pids;
+  GVariantBuilder *choices_array;
+  GDBusConnection *connection;
+  GError *error;
 
   print_debug ("in show_processes_cb %s", message_to_show);
 
@@ -230,14 +298,47 @@ show_processes_cb (GMountOperation          *mount_operation,
       g_variant_builder_add (pids, "i", pid);
     }
 
-  /* TODO: send the signal only to the appropriate owner (mount_op_owner) */
-  gvfs_remote_volume_monitor_emit_mount_op_show_processes (monitor,
-                                                           the_dbus_name,
-                                                           mount_op_id,
-                                                           message_to_show,
-                                                           g_variant_builder_end (pids),
-                                                           (const gchar *const *) choices);
-  g_variant_builder_unref (pids);
+  choices_array = g_variant_builder_new (G_VARIANT_TYPE_STRING_ARRAY);
+  for (n = 0; choices != NULL && choices[n] != NULL; n++)
+    {
+      g_variant_builder_add (choices_array, "s", choices[n]);
+    }
+
+  error = NULL;
+  connection = g_bus_get_sync (G_BUS_TYPE_SESSION, NULL, &error);
+  if (connection == NULL)
+    {
+      g_printerr ("Error getting session bus: %s (%s, %d)\n",
+                  error->message, g_quark_to_string (error->domain), error->code);
+      g_error_free (error);
+      goto out;
+    }
+  
+  error = NULL;
+  if (!g_dbus_connection_emit_signal (connection,
+                                      mount_op_owner,
+                                      "/org/gtk/Private/RemoteVolumeMonitor",
+                                      "org.gtk.Private.RemoteVolumeMonitor",
+                                      "MountOpShowProcesses",
+                                      g_variant_new ("(sssaias)",
+                                                     the_dbus_name,
+                                                     mount_op_id,
+                                                     message_to_show,
+                                                     pids,
+                                                     choices_array),
+                                      &error))
+    {
+      g_printerr ("Error emitting signal: %s (%s, %d)\n",
+                  error->message, g_quark_to_string (error->domain), error->code);
+      g_error_free (error);
+      goto out;
+    }
+
+  out:
+   g_variant_builder_unref (pids);
+   g_variant_builder_unref (choices_array);
+   if (connection != NULL)
+     g_object_unref (connection);
 }
 
 static void
@@ -246,16 +347,44 @@ aborted_cb (GMountOperation         *mount_operation,
 {
   const gchar *mount_op_id;
   const gchar *mount_op_owner;
-  
+  GDBusConnection *connection;
+  GError *error;
+
   print_debug ("in aborted_cb");
 
   mount_op_id = g_object_get_data (G_OBJECT (mount_operation), "mount_op_id");
   mount_op_owner = g_object_get_data (G_OBJECT (mount_operation), "mount_op_owner");
 
-  /* TODO: send the signal only to the appropriate owner (mount_op_owner) */
-  gvfs_remote_volume_monitor_emit_mount_op_aborted (monitor_daemon,
-                                                    the_dbus_name,
-                                                    mount_op_id);
+  error = NULL;
+  connection = g_bus_get_sync (G_BUS_TYPE_SESSION, NULL, &error);
+  if (connection == NULL)
+    {
+      g_printerr ("Error getting session bus: %s (%s, %d)\n",
+                  error->message, g_quark_to_string (error->domain), error->code);
+      g_error_free (error);
+      goto out;
+    }
+  
+  error = NULL;
+  if (!g_dbus_connection_emit_signal (connection,
+                                      mount_op_owner,
+                                      "/org/gtk/Private/RemoteVolumeMonitor",
+                                      "org.gtk.Private.RemoteVolumeMonitor",
+                                      "MountOpAborted",
+                                      g_variant_new ("(ss)",
+                                                     the_dbus_name,
+                                                     mount_op_id),
+                                      &error))
+    {
+      g_printerr ("Error emitting signal: %s (%s, %d)\n",
+                  error->message, g_quark_to_string (error->domain), error->code);
+      g_error_free (error);
+      goto out;
+    }
+
+  out:
+   if (connection != NULL)
+     g_object_unref (connection);
 }
 
 static void
