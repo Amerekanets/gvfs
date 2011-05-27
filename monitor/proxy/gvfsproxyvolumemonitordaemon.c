@@ -489,7 +489,7 @@ on_name_owner_vanished (GDBusConnection *connection,
     }
   else
     {
-      g_bus_unwatch_name (name_watcher_id - 1);
+      g_bus_unwatch_name (name_watcher_id);
     }
 
   g_hash_table_remove (unique_names_being_watched, name);
@@ -515,7 +515,7 @@ ensure_name_owner_changed_for_unique_name (GDBusMethodInvocation *invocation)
                                                     on_name_owner_vanished,
                                                     NULL,
                                                     NULL);
-  g_hash_table_insert (unique_names_being_watched, g_strdup (unique_name), (gpointer) (name_watcher_id + 1));
+  g_hash_table_insert (unique_names_being_watched, g_strdup (unique_name), (gpointer) name_watcher_id);
 
  out:
   G_UNLOCK (unique_names_being_watched_lock);
