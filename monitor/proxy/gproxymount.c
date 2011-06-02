@@ -507,15 +507,20 @@ unmount_cb (GVfsRemoteVolumeMonitor *proxy,
     {
       GSimpleAsyncResult *simple;
       if (error != NULL)
-        simple = g_simple_async_result_new_from_error (G_OBJECT (data->mount),
-                                                       data->callback,
-                                                       data->user_data,
-                                                       error);
+        {
+          g_dbus_error_strip_remote_error (error);
+          simple = g_simple_async_result_new_from_error (G_OBJECT (data->mount),
+                                                         data->callback,
+                                                         data->user_data,
+                                                         error);
+        }
       else
-        simple = g_simple_async_result_new (G_OBJECT (data->mount),
-                                            data->callback,
-                                            data->user_data,
-                                            NULL);
+        {
+          simple = g_simple_async_result_new (G_OBJECT (data->mount),
+                                              data->callback,
+                                              data->user_data,
+                                              NULL);
+        }
       g_simple_async_result_complete (simple);
       g_object_unref (simple);
     }

@@ -557,15 +557,20 @@ eject_cb (GVfsRemoteVolumeMonitor *proxy,
       GSimpleAsyncResult *simple;
 
       if (error != NULL)
-        simple = g_simple_async_result_new_from_error (G_OBJECT (data->drive),
-                                                       data->callback,
-                                                       data->user_data,
-                                                       error);
+        {
+          g_dbus_error_strip_remote_error (error);
+          simple = g_simple_async_result_new_from_error (G_OBJECT (data->drive),
+                                                         data->callback,
+                                                         data->user_data,
+                                                         error);
+        }
       else
-        simple = g_simple_async_result_new (G_OBJECT (data->drive),
-                                            data->callback,
-                                            data->user_data,
-                                            NULL);
+        {
+          simple = g_simple_async_result_new (G_OBJECT (data->drive),
+                                              data->callback,
+                                              data->user_data,
+                                              NULL);
+        }
       g_simple_async_result_complete (simple);
       g_object_unref (simple);
     }
@@ -697,15 +702,20 @@ stop_cb (GVfsRemoteVolumeMonitor *proxy,
       GSimpleAsyncResult *simple;
 
       if (error != NULL)
-        simple = g_simple_async_result_new_from_error (G_OBJECT (data->drive),
-                                                       data->callback,
-                                                       data->user_data,
-                                                       error);
+        {
+          g_dbus_error_strip_remote_error (error);
+          simple = g_simple_async_result_new_from_error (G_OBJECT (data->drive),
+                                                         data->callback,
+                                                         data->user_data,
+                                                         error);
+        }
       else
-        simple = g_simple_async_result_new (G_OBJECT (data->drive),
-                                            data->callback,
-                                            data->user_data,
-                                            NULL);
+        {
+          simple = g_simple_async_result_new (G_OBJECT (data->drive),
+                                              data->callback,
+                                              data->user_data,
+                                              NULL);
+        }
       g_simple_async_result_complete (simple);
       g_object_unref (simple);
     }
@@ -830,15 +840,20 @@ if (data->cancelled_handler_id > 0)
       GSimpleAsyncResult *simple;
 
       if (error != NULL)
-        simple = g_simple_async_result_new_from_error (G_OBJECT (data->drive),
-                                                       data->callback,
-                                                       data->user_data,
-                                                       error);
+        {
+          g_dbus_error_strip_remote_error (error);
+          simple = g_simple_async_result_new_from_error (G_OBJECT (data->drive),
+                                                         data->callback,
+                                                         data->user_data,
+                                                         error);
+        }
       else
-        simple = g_simple_async_result_new (G_OBJECT (data->drive),
-                                            data->callback,
-                                            data->user_data,
-                                            NULL);
+        {
+          simple = g_simple_async_result_new (G_OBJECT (data->drive),
+                                              data->callback,
+                                              data->user_data,
+                                              NULL);
+        }
       g_simple_async_result_complete_in_idle (simple);
       g_object_unref (simple);
     }
@@ -981,15 +996,20 @@ poll_for_media_cb (GVfsRemoteVolumeMonitor *proxy,
       GSimpleAsyncResult *simple;
 
       if (error != NULL)
-        simple = g_simple_async_result_new_from_error (G_OBJECT (data->drive),
-                                                       data->callback,
-                                                       data->user_data,
-                                                       error);
+        {
+          g_dbus_error_strip_remote_error (error);
+          simple = g_simple_async_result_new_from_error (G_OBJECT (data->drive),
+                                                         data->callback,
+                                                         data->user_data,
+                                                         error);
+        }
       else
-        simple = g_simple_async_result_new (G_OBJECT (data->drive),
-                                            data->callback,
-                                            data->user_data,
-                                            NULL);
+        {
+          simple = g_simple_async_result_new (G_OBJECT (data->drive),
+                                              data->callback,
+                                              data->user_data,
+                                              NULL);
+        }
       g_simple_async_result_complete (simple);
       g_object_unref (simple);
     }
