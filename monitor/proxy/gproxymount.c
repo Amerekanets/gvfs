@@ -583,10 +583,11 @@ g_proxy_mount_unmount_with_operation (GMount              *mount,
     {
       data->cancellation_id = g_strdup ("");
     }
-
-  
   
   proxy = g_proxy_volume_monitor_get_dbus_proxy (proxy_mount->volume_monitor);
+  g_proxy_volume_monitor_lock_for_timeout ();
+  g_dbus_proxy_set_default_timeout (G_DBUS_PROXY (proxy), G_PROXY_VOLUME_MONITOR_DBUS_TIMEOUT);  /* 30 minute timeout */
+
   gvfs_remote_volume_monitor_call_mount_unmount (proxy,
                                                  proxy_mount->id,
                                                  data->cancellation_id,
@@ -595,6 +596,9 @@ g_proxy_mount_unmount_with_operation (GMount              *mount,
                                                  NULL,
                                                  (GAsyncReadyCallback) unmount_cb,
                                                  data);
+
+  g_dbus_proxy_set_default_timeout (G_DBUS_PROXY (proxy), -1);
+  g_proxy_volume_monitor_unlock_for_timeout ();
   g_object_unref (proxy);
 
   G_UNLOCK (proxy_mount);

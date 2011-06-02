@@ -1325,6 +1325,20 @@ g_proxy_volume_monitor_get_dbus_proxy (GProxyVolumeMonitor *volume_monitor)
   return g_object_ref (volume_monitor->proxy);
 }
 
+G_LOCK_DEFINE_STATIC(proxy_timeout);
+
+void
+g_proxy_volume_monitor_lock_for_timeout ()
+{
+  G_LOCK (proxy_timeout);
+}
+
+void
+g_proxy_volume_monitor_unlock_for_timeout ()
+{
+  G_UNLOCK (proxy_timeout);
+}
+
 static void
 register_volume_monitor (GTypeModule *type_module,
                          const char *type_name,
