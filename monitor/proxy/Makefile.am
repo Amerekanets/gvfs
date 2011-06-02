@@ -80,3 +80,7 @@ install-data-local:
 EXTRA_DIST =							\
 	dbus-interfaces.xml					\
 	$(NULL)
+
+CLEANFILES =							\
+	$(dbus_built_sources)					\
+	$(NULL)
