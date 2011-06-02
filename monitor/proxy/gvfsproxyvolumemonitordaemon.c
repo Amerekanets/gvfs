@@ -1913,9 +1913,6 @@ bus_acquired_handler_cb (GDBusConnection *conn,
     return;
 
   monitor_daemon = gvfs_remote_volume_monitor_skeleton_new ();
-
-  g_dbus_interface_skeleton_set_flags (G_DBUS_INTERFACE_SKELETON (monitor_daemon),
-                                       G_DBUS_INTERFACE_SKELETON_FLAGS_HANDLE_METHOD_INVOCATIONS_IN_THREAD);
   
   g_signal_connect (monitor_daemon, "handle-is-supported", G_CALLBACK (handle_is_supported), NULL);
   if (monitor != NULL)
