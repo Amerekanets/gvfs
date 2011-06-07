@@ -186,17 +186,15 @@ g_proxy_mount_operation_handle_ask_password (const gchar  *wrapped_id,
 
   g_return_if_fail (wrapped_id != NULL);
 
+  if (id_to_op == NULL)
+    goto out;
+  
   G_LOCK (proxy_op);
   data = g_hash_table_lookup (id_to_op, wrapped_id);
   G_UNLOCK (proxy_op);
 
   if (data == NULL)
-    {
-      g_warning ("%s: No GMountOperation for id `%s'",
-                 G_STRFUNC,
-                 wrapped_id);
-      goto out;
-    }
+    goto out;
   
   if (data->reply_handler_id == 0)
     {
@@ -228,17 +226,15 @@ g_proxy_mount_operation_handle_ask_question (const gchar        *wrapped_id,
 
   g_return_if_fail (wrapped_id != NULL);
 
+  if (id_to_op == NULL)
+    goto out;
+  
   G_LOCK (proxy_op);
   data = g_hash_table_lookup (id_to_op, wrapped_id);
   G_UNLOCK (proxy_op);
 
   if (data == NULL)
-    {
-      g_warning ("%s: No GMountOperation for id `%s'",
-                 G_STRFUNC,
-                 wrapped_id);
-      goto out;
-    }
+    goto out;
 
   if (data->reply_handler_id == 0)
     {
@@ -274,18 +270,15 @@ g_proxy_mount_operation_handle_show_processes (const gchar        *wrapped_id,
 
   processes = NULL;
 
+  if (id_to_op == NULL)
+    goto out;
+  
   G_LOCK (proxy_op);
   data = g_hash_table_lookup (id_to_op, wrapped_id);
   G_UNLOCK (proxy_op);
 
   if (data == NULL)
-    {
-      g_warning ("%s: No GMountOperation for id `%s'",
-                 G_STRFUNC,
-                 wrapped_id);
-      goto out;
-    }
-
+    goto out;
   
   processes = g_array_new (FALSE, FALSE, sizeof (GPid));
   g_variant_iter_init (&iter, pids);
@@ -320,17 +313,15 @@ g_proxy_mount_operation_handle_aborted (const gchar *wrapped_id)
 
   g_return_if_fail (wrapped_id != NULL);
 
+  if (id_to_op == NULL)
+    goto out;
+
   G_LOCK (proxy_op);
   data = g_hash_table_lookup (id_to_op, wrapped_id);
   G_UNLOCK (proxy_op);
 
   if (data == NULL)
-    {
-      g_warning ("%s: No GMountOperation for id `%s'",
-                 G_STRFUNC,
-                 wrapped_id);
-      goto out;
-    }
+    goto out;
 
   g_signal_emit_by_name (data->op, "aborted");
 
@@ -348,13 +339,11 @@ g_proxy_mount_operation_destroy (const gchar *wrapped_id)
   if (strlen (wrapped_id) == 0)
     return;
 
+  if (id_to_op == NULL)
+    return;
+
   G_LOCK (proxy_op);
-  if (!g_hash_table_remove (id_to_op, wrapped_id))
-    {
-      g_warning ("%s: No GMountOperation for id `%s'",
-                 G_STRFUNC,
-                 wrapped_id);
-    }
+  g_hash_table_remove (id_to_op, wrapped_id);
   G_UNLOCK (proxy_op);
 }
 
