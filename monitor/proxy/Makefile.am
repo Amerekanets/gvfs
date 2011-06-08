@@ -10,7 +10,6 @@ $(dbus_built_sources) : Makefile.am dbus-interfaces.xml
 	gdbus-codegen									\
 		--interface-prefix org.gtk.Private.					\
 		--c-namespace GVfs							\
-		--c-generate-object-manager						\
 		--generate-c-code gvfsvolumemonitordbus					\
 		dbus-interfaces.xml							\
 		$(NULL)
