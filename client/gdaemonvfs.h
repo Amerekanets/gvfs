@@ -71,7 +71,7 @@ DBusConnection *_g_daemon_vfs_get_async_bus            (void);
 gboolean        _g_daemon_vfs_send_message_sync        (DBusMessage              *message,
 							GCancellable             *cancellable,
 							GError                  **error);
-int             _g_daemon_vfs_append_metadata_for_set  (DBusMessage *message,
+int             _g_daemon_vfs_append_metadata_for_set  (GVariantBuilder *builder,
 							MetaTree *tree,
 							const char *path,
 							const char *attribute,
