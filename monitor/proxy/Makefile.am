@@ -63,7 +63,6 @@ libgvfsproxyvolumemonitordaemon_noin_la_SOURCES =		\
 libgvfsproxyvolumemonitordaemon_noin_la_CFLAGS =		\
 	-I$(top_srcdir)/common                  		\
 	$(GLIB_CFLAGS)                          		\
-	$(DBUS_CFLAGS)                          		\
 	$(GDU_CFLAGS)                           		\
 	-DG_LOG_DOMAIN=\"GVFS-RemoteVolumeMonitorDaemon\"	\
 	-DGVFS_LOCALEDIR=\""$(localedir)"\"			\
@@ -71,7 +70,6 @@ libgvfsproxyvolumemonitordaemon_noin_la_CFLAGS =		\
 
 libgvfsproxyvolumemonitordaemon_noin_la_LIBADD  =     		\
 	$(GLIB_LIBS)                                 		\
-	$(DBUS_LIBS)                                 		\
 	$(top_builddir)/common/libgvfscommon.la 		\
 	$(NULL)
 
