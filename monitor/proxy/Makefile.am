@@ -6,6 +6,8 @@ remote_volume_monitorsdir = $(datadir)/gvfs/remote-volume-monitors
 module_flags = -export_dynamic -avoid-version -module -no-undefined -export-symbols-regex '^g_io_module_(load|unload|query)'
 
 dbus_built_sources = gvfsvolumemonitordbus.c gvfsvolumemonitordbus.h
+BUILT_SOURCES = $(dbus_built_sources)
+
 $(dbus_built_sources) : Makefile.am dbus-interfaces.xml
 	gdbus-codegen									\
 		--interface-prefix org.gtk.Private.					\
