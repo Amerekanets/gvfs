@@ -348,9 +348,9 @@ get_mount_for_mount_path (const char *mount_path,
 
 static void
 drive_changed (GVfsRemoteVolumeMonitor *object,
-               const gchar *TheDBusName,
-               const gchar *Id,
-               GVariant *Drive,
+               const gchar *arg_dbus_name,
+               const gchar *arg_id,
+               GVariant *arg_drive,
                gpointer user_data)
 {
   GProxyVolumeMonitor *monitor = G_PROXY_VOLUME_MONITOR (user_data);
@@ -361,13 +361,13 @@ drive_changed (GVfsRemoteVolumeMonitor *object,
 
   klass = G_PROXY_VOLUME_MONITOR_CLASS (G_OBJECT_GET_CLASS (monitor));
 
-  if (strcmp (TheDBusName, klass->dbus_name) != 0)
+  if (strcmp (arg_dbus_name, klass->dbus_name) != 0)
     goto not_for_us;
   
-  d = g_hash_table_lookup (monitor->drives, Id);
+  d = g_hash_table_lookup (monitor->drives, arg_id);
   if (d != NULL)
     {
-      g_proxy_drive_update (d, Drive);
+      g_proxy_drive_update (d, arg_drive);
       signal_emit_in_idle (d, "changed", NULL);
       signal_emit_in_idle (monitor, "drive-changed", d);
     }
@@ -378,9 +378,9 @@ drive_changed (GVfsRemoteVolumeMonitor *object,
 
 static void
 drive_connected (GVfsRemoteVolumeMonitor *object,
-                 const gchar *TheDBusName,
-                 const gchar *Id,
-                 GVariant *Drive,
+                 const gchar *arg_dbus_name,
+                 const gchar *arg_id,
+                 GVariant *arg_drive,
                  gpointer user_data)
 {
   GProxyVolumeMonitor *monitor = G_PROXY_VOLUME_MONITOR (user_data);
@@ -391,14 +391,14 @@ drive_connected (GVfsRemoteVolumeMonitor *object,
 
   klass = G_PROXY_VOLUME_MONITOR_CLASS (G_OBJECT_GET_CLASS (monitor));
 
-  if (strcmp (TheDBusName, klass->dbus_name) != 0)
+  if (strcmp (arg_dbus_name, klass->dbus_name) != 0)
     goto not_for_us;
   
-  d = g_hash_table_lookup (monitor->drives, Id);
+  d = g_hash_table_lookup (monitor->drives, arg_id);
   if (d == NULL)
     {
       d = g_proxy_drive_new (monitor);
-      g_proxy_drive_update (d, Drive);
+      g_proxy_drive_update (d, arg_drive);
       g_hash_table_insert (monitor->drives, g_strdup (g_proxy_drive_get_id (d)), d);
       signal_emit_in_idle (monitor, "drive-connected", d);
     }
@@ -409,9 +409,9 @@ drive_connected (GVfsRemoteVolumeMonitor *object,
 
 static void
 drive_disconnected (GVfsRemoteVolumeMonitor *object,
-                    const gchar *TheDBusName,
-                    const gchar *Id,
-                    GVariant *Drive,
+                    const gchar *arg_dbus_name,
+                    const gchar *arg_id,
+                    GVariant *arg_drive,
                     gpointer user_data)
 {
   GProxyVolumeMonitor *monitor = G_PROXY_VOLUME_MONITOR (user_data);
@@ -422,14 +422,14 @@ drive_disconnected (GVfsRemoteVolumeMonitor *object,
 
   klass = G_PROXY_VOLUME_MONITOR_CLASS (G_OBJECT_GET_CLASS (monitor));
 
-  if (strcmp (TheDBusName, klass->dbus_name) != 0)
+  if (strcmp (arg_dbus_name, klass->dbus_name) != 0)
     goto not_for_us;
   
-  d = g_hash_table_lookup (monitor->drives, Id);
+  d = g_hash_table_lookup (monitor->drives, arg_id);
   if (d != NULL)
     {
       g_object_ref (d);
-      g_hash_table_remove (monitor->drives, Id);
+      g_hash_table_remove (monitor->drives, arg_id);
       signal_emit_in_idle (d, "disconnected", NULL);
       signal_emit_in_idle (monitor, "drive-disconnected", d);
       g_object_unref (d);
@@ -441,9 +441,9 @@ drive_disconnected (GVfsRemoteVolumeMonitor *object,
 
 static void
 drive_eject_button (GVfsRemoteVolumeMonitor *object,
-                    const gchar *TheDBusName,
-                    const gchar *Id,
-                    GVariant *Drive,
+                    const gchar *arg_dbus_name,
+                    const gchar *arg_id,
+                    GVariant *arg_drive,
                     gpointer user_data)
 {
   GProxyVolumeMonitor *monitor = G_PROXY_VOLUME_MONITOR (user_data);
@@ -454,10 +454,10 @@ drive_eject_button (GVfsRemoteVolumeMonitor *object,
 
   klass = G_PROXY_VOLUME_MONITOR_CLASS (G_OBJECT_GET_CLASS (monitor));
 
-  if (strcmp (TheDBusName, klass->dbus_name) != 0)
+  if (strcmp (arg_dbus_name, klass->dbus_name) != 0)
     goto not_for_us;
   
-  d = g_hash_table_lookup (monitor->drives, Id);
+  d = g_hash_table_lookup (monitor->drives, arg_id);
   if (d != NULL)
     {
       signal_emit_in_idle (d, "eject-button", NULL);
@@ -470,9 +470,9 @@ drive_eject_button (GVfsRemoteVolumeMonitor *object,
 
 static void
 drive_stop_button (GVfsRemoteVolumeMonitor *object,
-                   const gchar *TheDBusName,
-                   const gchar *Id,
-                   GVariant *Drive,
+                   const gchar *arg_dbus_name,
+                   const gchar *arg_id,
+                   GVariant *arg_drive,
                    gpointer user_data)
 {
   GProxyVolumeMonitor *monitor = G_PROXY_VOLUME_MONITOR (user_data);
@@ -483,10 +483,10 @@ drive_stop_button (GVfsRemoteVolumeMonitor *object,
 
   klass = G_PROXY_VOLUME_MONITOR_CLASS (G_OBJECT_GET_CLASS (monitor));
 
-  if (strcmp (TheDBusName, klass->dbus_name) != 0)
+  if (strcmp (arg_dbus_name, klass->dbus_name) != 0)
     goto not_for_us;
   
-  d = g_hash_table_lookup (monitor->drives, Id);
+  d = g_hash_table_lookup (monitor->drives, arg_id);
   if (d != NULL)
     {
       signal_emit_in_idle (d, "stop-button", NULL);
@@ -499,9 +499,9 @@ drive_stop_button (GVfsRemoteVolumeMonitor *object,
 
 static void
 mount_added (GVfsRemoteVolumeMonitor *object,
-             const gchar *TheDBusName,
-             const gchar *Id,
-             GVariant *Mount,
+             const gchar *arg_dbus_name,
+             const gchar *arg_id,
+             GVariant *arg_mount,
              gpointer user_data)
 {
   GProxyVolumeMonitor *monitor = G_PROXY_VOLUME_MONITOR (user_data);
@@ -512,14 +512,14 @@ mount_added (GVfsRemoteVolumeMonitor *object,
 
   klass = G_PROXY_VOLUME_MONITOR_CLASS (G_OBJECT_GET_CLASS (monitor));
 
-  if (strcmp (TheDBusName, klass->dbus_name) != 0)
+  if (strcmp (arg_dbus_name, klass->dbus_name) != 0)
     goto not_for_us;
   
-  m = g_hash_table_lookup (monitor->mounts, Id);
+  m = g_hash_table_lookup (monitor->mounts, arg_id);
   if (m == NULL)
     {
       m = g_proxy_mount_new (monitor);
-      g_proxy_mount_update (m, Mount);
+      g_proxy_mount_update (m, arg_mount);
       g_hash_table_insert (monitor->mounts, g_strdup (g_proxy_mount_get_id (m)), m);
       signal_emit_in_idle (monitor, "mount-added", m);
     }
@@ -530,9 +530,9 @@ mount_added (GVfsRemoteVolumeMonitor *object,
 
 static void
 mount_changed (GVfsRemoteVolumeMonitor *object,
-               const gchar *TheDBusName,
-               const gchar *Id,
-               GVariant *Mount,
+               const gchar *arg_dbus_name,
+               const gchar *arg_id,
+               GVariant *arg_mount,
                gpointer user_data)
 {
   GProxyVolumeMonitor *monitor = G_PROXY_VOLUME_MONITOR (user_data);
@@ -543,13 +543,13 @@ mount_changed (GVfsRemoteVolumeMonitor *object,
 
   klass = G_PROXY_VOLUME_MONITOR_CLASS (G_OBJECT_GET_CLASS (monitor));
 
-  if (strcmp (TheDBusName, klass->dbus_name) != 0)
+  if (strcmp (arg_dbus_name, klass->dbus_name) != 0)
     goto not_for_us;
   
-  m = g_hash_table_lookup (monitor->mounts, Id);
+  m = g_hash_table_lookup (monitor->mounts, arg_id);
   if (m != NULL)
     {
-      g_proxy_mount_update (m, Mount);
+      g_proxy_mount_update (m, arg_mount);
       signal_emit_in_idle (m, "changed", NULL);
       signal_emit_in_idle (monitor, "mount-changed", m);
     }
@@ -560,9 +560,9 @@ mount_changed (GVfsRemoteVolumeMonitor *object,
 
 static void
 mount_pre_unmount (GVfsRemoteVolumeMonitor *object,
-                   const gchar *TheDBusName,
-                   const gchar *Id,
-                   GVariant *Mount,
+                   const gchar *arg_dbus_name,
+                   const gchar *arg_id,
+                   GVariant *arg_mount,
                    gpointer user_data)
 {
   GProxyVolumeMonitor *monitor = G_PROXY_VOLUME_MONITOR (user_data);
@@ -573,10 +573,10 @@ mount_pre_unmount (GVfsRemoteVolumeMonitor *object,
 
   klass = G_PROXY_VOLUME_MONITOR_CLASS (G_OBJECT_GET_CLASS (monitor));
 
-  if (strcmp (TheDBusName, klass->dbus_name) != 0)
+  if (strcmp (arg_dbus_name, klass->dbus_name) != 0)
     goto not_for_us;
   
-  m = g_hash_table_lookup (monitor->mounts, Id);
+  m = g_hash_table_lookup (monitor->mounts, arg_id);
   if (m != NULL)
     {
       signal_emit_in_idle (m, "pre-unmount", NULL);
@@ -589,9 +589,9 @@ mount_pre_unmount (GVfsRemoteVolumeMonitor *object,
 
 static void
 mount_removed (GVfsRemoteVolumeMonitor *object,
-               const gchar *TheDBusName,
-               const gchar *Id,
-               GVariant *Mount,
+               const gchar *arg_dbus_name,
+               const gchar *arg_id,
+               GVariant *arg_mount,
                gpointer user_data)
 {
   GProxyVolumeMonitor *monitor = G_PROXY_VOLUME_MONITOR (user_data);
@@ -602,14 +602,14 @@ mount_removed (GVfsRemoteVolumeMonitor *object,
 
   klass = G_PROXY_VOLUME_MONITOR_CLASS (G_OBJECT_GET_CLASS (monitor));
 
-  if (strcmp (TheDBusName, klass->dbus_name) != 0)
+  if (strcmp (arg_dbus_name, klass->dbus_name) != 0)
     goto not_for_us;
   
-  m = g_hash_table_lookup (monitor->mounts, Id);
+  m = g_hash_table_lookup (monitor->mounts, arg_id);
   if (m != NULL)
     {
       g_object_ref (m);
-      g_hash_table_remove (monitor->mounts, Id);
+      g_hash_table_remove (monitor->mounts, arg_id);
       signal_emit_in_idle (m, "unmounted", NULL);
       signal_emit_in_idle (monitor, "mount-removed", m);
       g_object_unref (m);
@@ -621,8 +621,8 @@ mount_removed (GVfsRemoteVolumeMonitor *object,
 
 static void
 mount_op_aborted (GVfsRemoteVolumeMonitor *object,
-                  const gchar *TheDBusName,
-                  const gchar *Id,
+                  const gchar *arg_dbus_name,
+                  const gchar *arg_id,
                   gpointer user_data)
 {
   GProxyVolumeMonitor *monitor = G_PROXY_VOLUME_MONITOR (user_data);
@@ -632,10 +632,10 @@ mount_op_aborted (GVfsRemoteVolumeMonitor *object,
 
   klass = G_PROXY_VOLUME_MONITOR_CLASS (G_OBJECT_GET_CLASS (monitor));
 
-  if (strcmp (TheDBusName, klass->dbus_name) != 0)
+  if (strcmp (arg_dbus_name, klass->dbus_name) != 0)
     goto not_for_us;
   
-  g_proxy_mount_operation_handle_aborted (Id);
+  g_proxy_mount_operation_handle_aborted (arg_id);
 
   not_for_us:
    G_UNLOCK (proxy_vm);
@@ -643,12 +643,12 @@ mount_op_aborted (GVfsRemoteVolumeMonitor *object,
 
 static void
 mount_op_ask_password (GVfsRemoteVolumeMonitor *object,
-                       const gchar *TheDBusName,
-                       const gchar *Id,
-                       const gchar *MessageToShow,
-                       const gchar *DefaultUser,
-                       const gchar *DefaultDomain,
-                       guint Flags,
+                       const gchar *arg_dbus_name,
+                       const gchar *arg_id,
+                       const gchar *arg_message_to_show,
+                       const gchar *arg_default_user,
+                       const gchar *arg_default_domain,
+                       guint arg_flags,
                        gpointer user_data)
 {
   GProxyVolumeMonitor *monitor = G_PROXY_VOLUME_MONITOR (user_data);
@@ -658,14 +658,14 @@ mount_op_ask_password (GVfsRemoteVolumeMonitor *object,
 
   klass = G_PROXY_VOLUME_MONITOR_CLASS (G_OBJECT_GET_CLASS (monitor));
 
-  if (strcmp (TheDBusName, klass->dbus_name) != 0)
+  if (strcmp (arg_dbus_name, klass->dbus_name) != 0)
     goto not_for_us;
   
-  g_proxy_mount_operation_handle_ask_password (Id, 
-                                               MessageToShow,
-                                               DefaultUser, 
-                                               DefaultDomain, 
-                                               Flags);
+  g_proxy_mount_operation_handle_ask_password (arg_id,
+                                               arg_message_to_show,
+                                               arg_default_user,
+                                               arg_default_domain,
+                                               arg_flags);
 
   not_for_us:
    G_UNLOCK (proxy_vm);
@@ -673,10 +673,10 @@ mount_op_ask_password (GVfsRemoteVolumeMonitor *object,
 
 static void
 mount_op_ask_question (GVfsRemoteVolumeMonitor *object,
-                       const gchar *TheDBusName,
-                       const gchar *Id,
-                       const gchar *MessageToShow,
-                       const gchar *const *Choices,
+                       const gchar *arg_dbus_name,
+                       const gchar *arg_id,
+                       const gchar *arg_message_to_show,
+                       const gchar *const *arg_choices,
                        gpointer user_data)
 {
   GProxyVolumeMonitor *monitor = G_PROXY_VOLUME_MONITOR (user_data);
@@ -686,12 +686,12 @@ mount_op_ask_question (GVfsRemoteVolumeMonitor *object,
 
   klass = G_PROXY_VOLUME_MONITOR_CLASS (G_OBJECT_GET_CLASS (monitor));
 
-  if (strcmp (TheDBusName, klass->dbus_name) != 0)
+  if (strcmp (arg_dbus_name, klass->dbus_name) != 0)
     goto not_for_us;
   
-  g_proxy_mount_operation_handle_ask_question (Id,
-                                               MessageToShow,
-                                               Choices);
+  g_proxy_mount_operation_handle_ask_question (arg_id,
+                                               arg_message_to_show,
+                                               arg_choices);
 
   not_for_us:
    G_UNLOCK (proxy_vm);
@@ -699,11 +699,11 @@ mount_op_ask_question (GVfsRemoteVolumeMonitor *object,
 
 static void
 mount_op_show_processes (GVfsRemoteVolumeMonitor *object,
-                         const gchar *TheDBusName,
-                         const gchar *Id,
-                         const gchar *MessageToShow,
-                         GVariant *Pid,
-                         const gchar *const *Choices,
+                         const gchar *arg_dbus_name,
+                         const gchar *arg_id,
+                         const gchar *arg_message_to_show,
+                         GVariant *arg_pid,
+                         const gchar *const *arg_choices,
                          gpointer user_data)
 {
   GProxyVolumeMonitor *monitor = G_PROXY_VOLUME_MONITOR (user_data);
@@ -713,13 +713,13 @@ mount_op_show_processes (GVfsRemoteVolumeMonitor *object,
 
   klass = G_PROXY_VOLUME_MONITOR_CLASS (G_OBJECT_GET_CLASS (monitor));
 
-  if (strcmp (TheDBusName, klass->dbus_name) != 0)
+  if (strcmp (arg_dbus_name, klass->dbus_name) != 0)
     goto not_for_us;
   
-  g_proxy_mount_operation_handle_show_processes (Id, 
-                                                 MessageToShow,
-                                                 Pid,
-                                                 Choices);
+  g_proxy_mount_operation_handle_show_processes (arg_id,
+                                                 arg_message_to_show,
+                                                 arg_pid,
+                                                 arg_choices);
 
   not_for_us:
    G_UNLOCK (proxy_vm);
@@ -727,9 +727,9 @@ mount_op_show_processes (GVfsRemoteVolumeMonitor *object,
 
 static void
 volume_added (GVfsRemoteVolumeMonitor *object,
-              const gchar *TheDBusName,
-              const gchar *Id,
-              GVariant *Volume,
+              const gchar *arg_dbus_name,
+              const gchar *arg_id,
+              GVariant *arg_volume,
               gpointer user_data)
 {
   GProxyVolumeMonitor *monitor = G_PROXY_VOLUME_MONITOR (user_data);
@@ -740,14 +740,14 @@ volume_added (GVfsRemoteVolumeMonitor *object,
 
   klass = G_PROXY_VOLUME_MONITOR_CLASS (G_OBJECT_GET_CLASS (monitor));
 
-  if (strcmp (TheDBusName, klass->dbus_name) != 0)
+  if (strcmp (arg_dbus_name, klass->dbus_name) != 0)
     goto not_for_us;
   
-  v = g_hash_table_lookup (monitor->volumes, Id);
+  v = g_hash_table_lookup (monitor->volumes, arg_id);
   if (v == NULL)
     {
       v = g_proxy_volume_new (monitor);
-      g_proxy_volume_update (v, Volume);
+      g_proxy_volume_update (v, arg_volume);
       g_hash_table_insert (monitor->volumes, g_strdup (g_proxy_volume_get_id (v)), v);
       signal_emit_in_idle (monitor, "volume-added", v);
     }
@@ -758,9 +758,9 @@ volume_added (GVfsRemoteVolumeMonitor *object,
 
 static void
 volume_changed (GVfsRemoteVolumeMonitor *object,
-                const gchar *TheDBusName,
-                const gchar *Id,
-                GVariant *Volume,
+                const gchar *arg_dbus_name,
+                const gchar *arg_id,
+                GVariant *arg_volume,
                 gpointer user_data)
 {
   GProxyVolumeMonitor *monitor = G_PROXY_VOLUME_MONITOR (user_data);
@@ -771,15 +771,15 @@ volume_changed (GVfsRemoteVolumeMonitor *object,
 
   klass = G_PROXY_VOLUME_MONITOR_CLASS (G_OBJECT_GET_CLASS (monitor));
 
-  if (strcmp (TheDBusName, klass->dbus_name) != 0)
+  if (strcmp (arg_dbus_name, klass->dbus_name) != 0)
     goto not_for_us;
   
-  v = g_hash_table_lookup (monitor->volumes, Id);
+  v = g_hash_table_lookup (monitor->volumes, arg_id);
   if (v != NULL)
     {
       GProxyShadowMount *shadow_mount;
 
-      g_proxy_volume_update (v, Volume);
+      g_proxy_volume_update (v, arg_volume);
       signal_emit_in_idle (v, "changed", NULL);
       signal_emit_in_idle (monitor, "volume-changed", v);
 
@@ -798,9 +798,9 @@ volume_changed (GVfsRemoteVolumeMonitor *object,
 
 static void
 volume_removed (GVfsRemoteVolumeMonitor *object,
-                const gchar *TheDBusName,
-                const gchar *Id,
-                GVariant *Volume,
+                const gchar *arg_dbus_name,
+                const gchar *arg_id,
+                GVariant *arg_volume,
                 gpointer user_data)
 {
   GProxyVolumeMonitor *monitor = G_PROXY_VOLUME_MONITOR (user_data);
@@ -811,14 +811,14 @@ volume_removed (GVfsRemoteVolumeMonitor *object,
 
   klass = G_PROXY_VOLUME_MONITOR_CLASS (G_OBJECT_GET_CLASS (monitor));
 
-  if (strcmp (TheDBusName, klass->dbus_name) != 0)
+  if (strcmp (arg_dbus_name, klass->dbus_name) != 0)
     goto not_for_us;
   
-  v = g_hash_table_lookup (monitor->volumes, Id);
+  v = g_hash_table_lookup (monitor->volumes, arg_id);
   if (v != NULL)
     {
       g_object_ref (v);
-      g_hash_table_remove (monitor->volumes, Id);
+      g_hash_table_remove (monitor->volumes, arg_id);
       signal_emit_in_idle (v, "removed", NULL);
       signal_emit_in_idle (monitor, "volume-removed", v);
       dispose_in_idle (v);

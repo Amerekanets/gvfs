@@ -892,7 +892,8 @@ append_mount (GMount *mount)
 
 static gboolean
 handle_list (GVfsRemoteVolumeMonitor *object,
-             GDBusMethodInvocation *invocation)
+             GDBusMethodInvocation *invocation,
+             gpointer user_data)
 {
   GList *drives;
   GList *volumes;
@@ -969,10 +970,11 @@ mount_unmount_cb (GMount *mount, GAsyncResult *result, GDBusMethodInvocation *in
 static gboolean
 handle_mount_unmount (GVfsRemoteVolumeMonitor *object,
                       GDBusMethodInvocation *invocation,
-                      const gchar *Id,
-                      const gchar *CancellationId,
-                      guint UnmountFlags,
-                      const gchar *MountOpId)
+                      const gchar *arg_id,
+                      const gchar *arg_cancellation_id,
+                      guint arg_unmount_flags,
+                      const gchar *arg_mount_op_id,
+                      gpointer user_data)
 {
   const char *sender;
   GCancellable *cancellable;
@@ -992,7 +994,7 @@ handle_mount_unmount (GVfsRemoteVolumeMonitor *object,
 
       mount = G_MOUNT (l->data);
       mount_id = g_strdup_printf ("%p", mount);
-      if (strcmp (mount_id, Id) == 0)
+      if (strcmp (mount_id, arg_id) == 0)
         break;
 
       g_free (mount_id);
@@ -1019,7 +1021,7 @@ handle_mount_unmount (GVfsRemoteVolumeMonitor *object,
   cancellable = g_cancellable_new ();
   g_object_set_data_full (G_OBJECT (mount), "cancellable", cancellable, g_object_unref);
   g_object_set_data_full (G_OBJECT (cancellable), "owner", g_strdup (sender), g_free);
-  g_object_set_data_full (G_OBJECT (cancellable), "cancellation_id", g_strdup (CancellationId), g_free);
+  g_object_set_data_full (G_OBJECT (cancellable), "cancellation_id", g_strdup (arg_cancellation_id), g_free);
   G_LOCK (outstanding_ops_lock);
   outstanding_ops = g_list_prepend (outstanding_ops, cancellable);
   G_UNLOCK (outstanding_ops_lock);
@@ -1028,15 +1030,15 @@ handle_mount_unmount (GVfsRemoteVolumeMonitor *object,
                      NULL);
 
   mount_operation = NULL;
-  if (MountOpId != NULL && strlen (MountOpId) > 0)
+  if (arg_mount_op_id != NULL && strlen (arg_mount_op_id) > 0)
     {
-      mount_operation = wrap_mount_op (MountOpId, sender, object);
+      mount_operation = wrap_mount_op (arg_mount_op_id, sender, object);
       g_object_set_data_full (G_OBJECT (mount), "mount_operation", mount_operation, g_object_unref);
     }
 
   g_object_ref (mount);
   g_mount_unmount_with_operation (mount,
-                                  UnmountFlags,
+                                  arg_unmount_flags,
                                   mount_operation,
                                   cancellable,
                                   (GAsyncReadyCallback) mount_unmount_cb,
@@ -1056,14 +1058,15 @@ handle_mount_unmount (GVfsRemoteVolumeMonitor *object,
 static gboolean
 handle_mount_op_reply (GVfsRemoteVolumeMonitor *object,
                        GDBusMethodInvocation *invocation,
-                       const gchar *MountOpId,
-                       guint Result,
-                       const gchar *UserName,
-                       const gchar *Domain,
-                       const gchar *EncodedPassword,
-                       guint PasswordSave,
-                       guint Choice,
-                       gboolean Anonymous)
+                       const gchar *arg_mount_op_id,
+                       gint arg_result,
+                       const gchar *arg_user_name,
+                       const gchar *arg_domain,
+                       const gchar *arg_encoded_password,
+                       gint arg_password_save,
+                       gint arg_choice,
+                       gboolean arg_anonymous,
+                       gpointer user_data)
 {
   char *decoded_password;
   gsize decoded_password_len;
@@ -1088,7 +1091,7 @@ handle_mount_op_reply (GVfsRemoteVolumeMonitor *object,
 
       owner = g_object_get_data (G_OBJECT (op), "mount_op_owner");
       id = g_object_get_data (G_OBJECT (op), "mount_op_id");
-      if (g_strcmp0 (owner, sender) == 0 && g_strcmp0 (id, MountOpId) == 0)
+      if (g_strcmp0 (owner, sender) == 0 && g_strcmp0 (id, arg_mount_op_id) == 0)
         {
           print_debug ("found mount_op");
           mount_operation = op;
@@ -1105,16 +1108,16 @@ handle_mount_op_reply (GVfsRemoteVolumeMonitor *object,
       goto out;
     }
 
-  decoded_password = (gchar *) g_base64_decode (EncodedPassword, &decoded_password_len);
+  decoded_password = (gchar *) g_base64_decode (arg_encoded_password, &decoded_password_len);
 
-  g_mount_operation_set_username (mount_operation, UserName);
-  g_mount_operation_set_domain (mount_operation, Domain);
+  g_mount_operation_set_username (mount_operation, arg_user_name);
+  g_mount_operation_set_domain (mount_operation, arg_domain);
   g_mount_operation_set_password (mount_operation, decoded_password);
-  g_mount_operation_set_password_save (mount_operation, PasswordSave);
-  g_mount_operation_set_choice (mount_operation, Choice);
-  g_mount_operation_set_anonymous (mount_operation, Anonymous);
+  g_mount_operation_set_password_save (mount_operation, arg_password_save);
+  g_mount_operation_set_choice (mount_operation, arg_choice);
+  g_mount_operation_set_anonymous (mount_operation, arg_anonymous);
 
-  g_mount_operation_reply (mount_operation, Result);
+  g_mount_operation_reply (mount_operation, arg_result);
 
   gvfs_remote_volume_monitor_complete_mount_op_reply (object, invocation);
 
@@ -1153,10 +1156,11 @@ volume_mount_cb (GVolume *volume, GAsyncResult *result, GDBusMethodInvocation *i
 static gboolean
 handle_volume_mount (GVfsRemoteVolumeMonitor *object,
                      GDBusMethodInvocation *invocation,
-                     const gchar *Id,
-                     const gchar *CancellationId,
-                     guint MountFlags,
-                     const gchar *MountOpId)
+                     const gchar *arg_id,
+                     const gchar *arg_cancellation_id,
+                     guint arg_mount_flags,
+                     const gchar *arg_mount_op_id,
+                     gpointer user_data)
 {
   const char *sender;
   GList *volumes, *l;
@@ -1176,7 +1180,7 @@ handle_volume_mount (GVfsRemoteVolumeMonitor *object,
 
       volume = G_VOLUME (l->data);
       volume_id = g_strdup_printf ("%p", volume);
-      if (strcmp (volume_id, Id) == 0)
+      if (strcmp (volume_id, arg_id) == 0)
         break;
 
       g_free (volume_id);
@@ -1201,16 +1205,16 @@ handle_volume_mount (GVfsRemoteVolumeMonitor *object,
     }
 
   mount_operation = NULL;
-  if (MountOpId != NULL && strlen (MountOpId) > 0)
+  if (arg_mount_op_id != NULL && strlen (arg_mount_op_id) > 0)
     {
-      mount_operation = wrap_mount_op (MountOpId, sender, object);
+      mount_operation = wrap_mount_op (arg_mount_op_id, sender, object);
       g_object_set_data_full (G_OBJECT (volume), "mount_operation", mount_operation, g_object_unref);
     }
 
   cancellable = g_cancellable_new ();
   g_object_set_data_full (G_OBJECT (volume), "cancellable", cancellable, g_object_unref);
   g_object_set_data_full (G_OBJECT (cancellable), "owner", g_strdup (sender), g_free);
-  g_object_set_data_full (G_OBJECT (cancellable), "cancellation_id", g_strdup (CancellationId), g_free);
+  g_object_set_data_full (G_OBJECT (cancellable), "cancellation_id", g_strdup (arg_cancellation_id), g_free);
   G_LOCK (outstanding_ops_lock);
   outstanding_ops = g_list_prepend (outstanding_ops, cancellable);
   G_UNLOCK (outstanding_ops_lock);
@@ -1219,7 +1223,7 @@ handle_volume_mount (GVfsRemoteVolumeMonitor *object,
                      NULL);
 
   g_volume_mount (volume,
-                  MountFlags,
+                  arg_mount_flags,
                   mount_operation,
                   cancellable,
                   (GAsyncReadyCallback) volume_mount_cb,
@@ -1264,10 +1268,11 @@ drive_eject_cb (GDrive *drive, GAsyncResult *result, GDBusMethodInvocation *invo
 static gboolean
 handle_drive_eject (GVfsRemoteVolumeMonitor *object,
                     GDBusMethodInvocation *invocation,
-                    const gchar *Id,
-                    const gchar *CancellationId,
-                    guint UnmountFlags,
-                    const gchar *MountOpId)
+                    const gchar *arg_id,
+                    const gchar *arg_cancellation_id,
+                    guint arg_unmount_flags,
+                    const gchar *arg_mount_op_id,
+                    gpointer user_data)
 {
   const char *sender;
   GMountOperation *mount_operation;
@@ -1287,7 +1292,7 @@ handle_drive_eject (GVfsRemoteVolumeMonitor *object,
 
       drive = G_DRIVE (l->data);
       drive_id = g_strdup_printf ("%p", drive);
-      if (strcmp (drive_id, Id) == 0)
+      if (strcmp (drive_id, arg_id) == 0)
         break;
 
       g_free (drive_id);
@@ -1314,7 +1319,7 @@ handle_drive_eject (GVfsRemoteVolumeMonitor *object,
   cancellable = g_cancellable_new ();
   g_object_set_data_full (G_OBJECT (drive), "cancellable", cancellable, g_object_unref);
   g_object_set_data_full (G_OBJECT (cancellable), "owner", g_strdup (sender), g_free);
-  g_object_set_data_full (G_OBJECT (cancellable), "cancellation_id", g_strdup (CancellationId), g_free);
+  g_object_set_data_full (G_OBJECT (cancellable), "cancellation_id", g_strdup (arg_cancellation_id), g_free);
   G_LOCK (outstanding_ops_lock);
   outstanding_ops = g_list_prepend (outstanding_ops, cancellable);
   G_UNLOCK (outstanding_ops_lock);
@@ -1323,14 +1328,14 @@ handle_drive_eject (GVfsRemoteVolumeMonitor *object,
                      NULL);
 
   mount_operation = NULL;
-  if (MountOpId != NULL && strlen (MountOpId) > 0)
+  if (arg_mount_op_id != NULL && strlen (arg_mount_op_id) > 0)
     {
-      mount_operation = wrap_mount_op (MountOpId, sender, object);
+      mount_operation = wrap_mount_op (arg_mount_op_id, sender, object);
       g_object_set_data_full (G_OBJECT (drive), "mount_operation", mount_operation, g_object_unref);
     }
 
   g_drive_eject_with_operation (drive,
-                                UnmountFlags,
+                                arg_unmount_flags,
                                 mount_operation,
                                 cancellable,
                                 (GAsyncReadyCallback) drive_eject_cb,
@@ -1375,10 +1380,11 @@ drive_stop_cb (GDrive *drive, GAsyncResult *result, GDBusMethodInvocation *invoc
 static gboolean
 handle_drive_stop (GVfsRemoteVolumeMonitor *object,
                    GDBusMethodInvocation *invocation,
-                   const gchar *Id,
-                   const gchar *CancellationId,
-                   guint UnmountFlags,
-                   const gchar *MountOpId)
+                   const gchar *arg_id,
+                   const gchar *arg_cancellation_id,
+                   guint arg_unmount_flags,
+                   const gchar *arg_mount_op_id,
+                   gpointer user_data)
 {
   const char *sender;
   GMountOperation *mount_operation;
@@ -1398,7 +1404,7 @@ handle_drive_stop (GVfsRemoteVolumeMonitor *object,
 
       drive = G_DRIVE (l->data);
       drive_id = g_strdup_printf ("%p", drive);
-      if (strcmp (drive_id, Id) == 0)
+      if (strcmp (drive_id, arg_id) == 0)
         break;
 
       g_free (drive_id);
@@ -1425,7 +1431,7 @@ handle_drive_stop (GVfsRemoteVolumeMonitor *object,
   cancellable = g_cancellable_new ();
   g_object_set_data_full (G_OBJECT (drive), "cancellable", cancellable, g_object_unref);
   g_object_set_data_full (G_OBJECT (cancellable), "owner", g_strdup (sender), g_free);
-  g_object_set_data_full (G_OBJECT (cancellable), "cancellation_id", g_strdup (CancellationId), g_free);
+  g_object_set_data_full (G_OBJECT (cancellable), "cancellation_id", g_strdup (arg_cancellation_id), g_free);
   G_LOCK (outstanding_ops_lock);
   outstanding_ops = g_list_prepend (outstanding_ops, cancellable);
   G_UNLOCK (outstanding_ops_lock);
@@ -1434,14 +1440,14 @@ handle_drive_stop (GVfsRemoteVolumeMonitor *object,
                      NULL);
 
   mount_operation = NULL;
-  if (MountOpId != NULL && strlen (MountOpId) > 0)
+  if (arg_mount_op_id != NULL && strlen (arg_mount_op_id) > 0)
     {
-      mount_operation = wrap_mount_op (MountOpId, sender, object);
+      mount_operation = wrap_mount_op (arg_mount_op_id, sender, object);
       g_object_set_data_full (G_OBJECT (drive), "mount_operation", mount_operation, g_object_unref);
     }
 
   g_drive_stop (drive,
-                UnmountFlags,
+                arg_unmount_flags,
                 mount_operation,
                 cancellable,
                 (GAsyncReadyCallback) drive_stop_cb,
@@ -1486,10 +1492,11 @@ drive_start_cb (GDrive *drive, GAsyncResult *result, GDBusMethodInvocation *invo
 static gboolean
 handle_drive_start (GVfsRemoteVolumeMonitor *object,
                     GDBusMethodInvocation *invocation,
-                    const gchar *Id,
-                    const gchar *CancellationId,
-                    guint Flags,
-                    const gchar *MountOpId)
+                    const gchar *arg_id,
+                    const gchar *arg_cancellation_id,
+                    guint arg_flags,
+                    const gchar *arg_mount_op_id,
+                    gpointer user_data)
 {
   const char *sender;
   GList *drives, *l;
@@ -1509,7 +1516,7 @@ handle_drive_start (GVfsRemoteVolumeMonitor *object,
 
       drive = G_DRIVE (l->data);
       drive_id = g_strdup_printf ("%p", drive);
-      if (strcmp (drive_id, Id) == 0)
+      if (strcmp (drive_id, arg_id) == 0)
         break;
 
       g_free (drive_id);
@@ -1534,16 +1541,16 @@ handle_drive_start (GVfsRemoteVolumeMonitor *object,
     }
 
   mount_operation = NULL;
-  if (MountOpId != NULL && strlen (MountOpId) > 0)
+  if (arg_mount_op_id != NULL && strlen (arg_mount_op_id) > 0)
     {
-      mount_operation = wrap_mount_op (MountOpId, sender, object);
+      mount_operation = wrap_mount_op (arg_mount_op_id, sender, object);
       g_object_set_data_full (G_OBJECT (drive), "mount_operation", mount_operation, g_object_unref);
     }
 
   cancellable = g_cancellable_new ();
   g_object_set_data_full (G_OBJECT (drive), "cancellable", cancellable, g_object_unref);
   g_object_set_data_full (G_OBJECT (cancellable), "owner", g_strdup (sender), g_free);
-  g_object_set_data_full (G_OBJECT (cancellable), "cancellation_id", g_strdup (CancellationId), g_free);
+  g_object_set_data_full (G_OBJECT (cancellable), "cancellation_id", g_strdup (arg_cancellation_id), g_free);
   G_LOCK (outstanding_ops_lock);
   outstanding_ops = g_list_prepend (outstanding_ops, cancellable);
   G_UNLOCK (outstanding_ops_lock);
@@ -1552,7 +1559,7 @@ handle_drive_start (GVfsRemoteVolumeMonitor *object,
                      NULL);
 
   g_drive_start (drive,
-                 Flags,
+                 arg_flags,
                  mount_operation,
                  cancellable,
                  (GAsyncReadyCallback) drive_start_cb,
@@ -1596,8 +1603,9 @@ drive_poll_for_media_cb (GDrive *drive, GAsyncResult *result, GDBusMethodInvocat
 static gboolean
 handle_drive_poll_for_media (GVfsRemoteVolumeMonitor *object,
                              GDBusMethodInvocation *invocation,
-                             const gchar *Id,
-                             const gchar *CancellationId)
+                             const gchar *arg_id,
+                             const gchar *arg_cancellation_id,
+                             gpointer user_data)
 {
   const char *sender;
   GCancellable *cancellable;
@@ -1616,7 +1624,7 @@ handle_drive_poll_for_media (GVfsRemoteVolumeMonitor *object,
 
       drive = G_DRIVE (l->data);
       drive_id = g_strdup_printf ("%p", drive);
-      if (strcmp (drive_id, Id) == 0)
+      if (strcmp (drive_id, arg_id) == 0)
         break;
 
       g_free (drive_id);
@@ -1643,7 +1651,7 @@ handle_drive_poll_for_media (GVfsRemoteVolumeMonitor *object,
   cancellable = g_cancellable_new ();
   g_object_set_data_full (G_OBJECT (drive), "cancellable", cancellable, g_object_unref);
   g_object_set_data_full (G_OBJECT (cancellable), "owner", g_strdup (sender), g_free);
-  g_object_set_data_full (G_OBJECT (cancellable), "cancellation_id", g_strdup (CancellationId), g_free);
+  g_object_set_data_full (G_OBJECT (cancellable), "cancellation_id", g_strdup (arg_cancellation_id), g_free);
   G_LOCK (outstanding_ops_lock);
   outstanding_ops = g_list_prepend (outstanding_ops, cancellable);
   G_UNLOCK (outstanding_ops_lock);
@@ -1669,7 +1677,8 @@ handle_drive_poll_for_media (GVfsRemoteVolumeMonitor *object,
 
 static gboolean
 handle_is_supported (GVfsRemoteVolumeMonitor *object,
-                     GDBusMethodInvocation *invocation)
+                     GDBusMethodInvocation *invocation,
+                     gpointer user_data)
 {
   print_debug ("in handle_supported");
 
@@ -1693,7 +1702,8 @@ handle_is_supported (GVfsRemoteVolumeMonitor *object,
 static gboolean
 handle_cancel_operation (GVfsRemoteVolumeMonitor *object,
                          GDBusMethodInvocation *invocation,
-                         const gchar *CancellationId)
+                         const gchar *arg_cancellation_id,
+                         gpointer user_data)
 {
   gboolean was_cancelled;
   const char *sender;
@@ -1715,7 +1725,7 @@ handle_cancel_operation (GVfsRemoteVolumeMonitor *object,
 
       owner = g_object_get_data (G_OBJECT (cancellable), "owner");
       id = g_object_get_data (G_OBJECT (cancellable), "cancellation_id");
-      if (g_strcmp0 (owner, sender) == 0 && g_strcmp0 (id, CancellationId) == 0)
+      if (g_strcmp0 (owner, sender) == 0 && g_strcmp0 (id, arg_cancellation_id) == 0)
         {
           print_debug ("found op to cancel");
           g_cancellable_cancel (cancellable);
@@ -1738,8 +1748,8 @@ handle_cancel_operation (GVfsRemoteVolumeMonitor *object,
 
 typedef GVariant * (*AppendFunc) (void *object);
 typedef void (*MonitorSignalFunc) (GVfsRemoteVolumeMonitor *object, 
-                                   const gchar *TheDBusName,
-                                   const gchar *Id,
+                                   const gchar *arg_dbus_name,
+                                   const gchar *arg_id,
                                    GVariant *val);
 
 static void

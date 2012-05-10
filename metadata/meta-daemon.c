@@ -113,9 +113,9 @@ tree_info_lookup (const char *filename)
 static gboolean
 handle_set (GVfsMetadata *object,
             GDBusMethodInvocation *invocation,
-            const gchar *treefile,
-            const gchar *path,
-            GVariant *data,
+            const gchar *arg_treefile,
+            const gchar *arg_path,
+            GVariant *arg_data,
             GVfsMetadata *daemon)
 {
   TreeInfo *info;
@@ -126,27 +126,27 @@ handle_set (GVfsMetadata *object,
   GVariantIter iter;
   GVariant *value;
 
-  info = tree_info_lookup (treefile);
+  info = tree_info_lookup (arg_treefile);
   if (info == NULL)
     {
       g_dbus_method_invocation_return_error (invocation,
                                              G_IO_ERROR,
                                              G_IO_ERROR_NOT_FOUND,
                                              _("Can't find metadata file %s"),
-                                             treefile);
+                                             arg_treefile);
       return TRUE;
     }
 
   error = NULL;
 
-  g_variant_iter_init (&iter, data);
+  g_variant_iter_init (&iter, arg_data);
   while (g_variant_iter_next (&iter, "{&sv}", &key, &value))
     {
       if (g_variant_is_of_type (value, G_VARIANT_TYPE_STRING_ARRAY))
 	{
 	  /* stringv */
           strv = g_variant_get_strv (value, NULL);
-	  if (!meta_tree_set_stringv (info->tree, path, key, (gchar **) strv))
+	  if (!meta_tree_set_stringv (info->tree, arg_path, key, (gchar **) strv))
 	    {
 	      g_set_error_literal (&error, G_IO_ERROR,
                                    G_IO_ERROR_FAILED,
@@ -158,7 +158,7 @@ handle_set (GVfsMetadata *object,
 	{
 	  /* string */
           str = g_variant_get_string (value, NULL);
-	  if (!meta_tree_set_string (info->tree, path, key, str))
+	  if (!meta_tree_set_string (info->tree, arg_path, key, str))
 	    {
               g_set_error_literal (&error, G_IO_ERROR,
                                    G_IO_ERROR_FAILED,
@@ -168,7 +168,7 @@ handle_set (GVfsMetadata *object,
       else if (g_variant_is_of_type (value, G_VARIANT_TYPE_BYTE))
 	{
 	  /* Unset */
-	  if (!meta_tree_unset (info->tree, path, key))
+	  if (!meta_tree_unset (info->tree, arg_path, key))
 	    {
               g_set_error_literal (&error, G_IO_ERROR,
                                    G_IO_ERROR_FAILED,
@@ -234,9 +234,9 @@ enum_keys (const char *key,
 static gboolean
 handle_get (GVfsMetadata *object,
             GDBusMethodInvocation *invocation,
-            const gchar *treefile,
-            const gchar *path,
-            const gchar *const *keys,
+            const gchar *arg_treefile,
+            const gchar *arg_path,
+            const gchar *const *arg_keys,
             GVfsMetadata *daemon)
 {
   TreeInfo *info;
@@ -246,35 +246,35 @@ handle_get (GVfsMetadata *object,
   gchar **i;
   GVariantBuilder *builder;
 
-  info = tree_info_lookup (treefile);
+  info = tree_info_lookup (arg_treefile);
   if (info == NULL)
     {
       g_dbus_method_invocation_return_error (invocation,
                                              G_IO_ERROR,
                                              G_IO_ERROR_NOT_FOUND,
                                              _("Can't find metadata file %s"),
-                                             treefile);
+                                             arg_treefile);
       return TRUE;
     }
 
-  if (keys == NULL)
+  if (arg_keys == NULL)
     {
       /* Get all keys */
       free_keys = TRUE;
       meta_keys = g_ptr_array_new ();
-      meta_tree_enumerate_keys (info->tree, path, enum_keys, meta_keys);
+      meta_tree_enumerate_keys (info->tree, arg_path, enum_keys, meta_keys);
       iter_keys = (gchar **) g_ptr_array_free (meta_keys, FALSE);
     }
   else
     {
       free_keys = FALSE;
-      iter_keys = (gchar **) keys;
+      iter_keys = (gchar **) arg_keys;
     }
 
   builder = g_variant_builder_new (G_VARIANT_TYPE_VARDICT);
 
   for (i = iter_keys; *i; i++)
-    append_key (builder, info->tree, path, *i);
+    append_key (builder, info->tree, arg_path, *i);
   if (free_keys)
     g_strfreev (iter_keys);
   
@@ -288,25 +288,25 @@ handle_get (GVfsMetadata *object,
 static gboolean
 handle_unset (GVfsMetadata *object,
               GDBusMethodInvocation *invocation,
-              const gchar *treefile,
-              const gchar *path,
-              const gchar *key,
+              const gchar *arg_treefile,
+              const gchar *arg_path,
+              const gchar *arg_key,
               GVfsMetadata *daemon)
 {
   TreeInfo *info;
 
-  info = tree_info_lookup (treefile);
+  info = tree_info_lookup (arg_treefile);
   if (info == NULL)
     {
       g_dbus_method_invocation_return_error (invocation,
                                              G_IO_ERROR,
                                              G_IO_ERROR_NOT_FOUND,
                                              _("Can't find metadata file %s"),
-                                             treefile);
+                                             arg_treefile);
       return TRUE;
     }
 
-  if (!meta_tree_unset (info->tree, path, key))
+  if (!meta_tree_unset (info->tree, arg_path, arg_key))
     {
       g_dbus_method_invocation_return_error_literal (invocation,
                                                      G_IO_ERROR,
@@ -324,24 +324,24 @@ handle_unset (GVfsMetadata *object,
 static gboolean
 handle_remove (GVfsMetadata *object,
                GDBusMethodInvocation *invocation,
-               const gchar *treefile,
-               const gchar *path,
+               const gchar *arg_treefile,
+               const gchar *arg_path,
                GVfsMetadata *daemon)
 {
   TreeInfo *info;
 
-  info = tree_info_lookup (treefile);
+  info = tree_info_lookup (arg_treefile);
   if (info == NULL)
     {
       g_dbus_method_invocation_return_error (invocation,
                                              G_IO_ERROR,
                                              G_IO_ERROR_NOT_FOUND,
                                              _("Can't find metadata file %s"),
-                                             treefile);
+                                             arg_treefile);
       return TRUE;
     }
 
-  if (!meta_tree_remove (info->tree, path))
+  if (!meta_tree_remove (info->tree, arg_path))
     {
       g_dbus_method_invocation_return_error_literal (invocation,
                                                      G_IO_ERROR,
@@ -359,26 +359,26 @@ handle_remove (GVfsMetadata *object,
 static gboolean
 handle_move (GVfsMetadata *object,
              GDBusMethodInvocation *invocation,
-             const gchar *treefile,
-             const gchar *path,
-             const gchar *dest_path,
+             const gchar *arg_treefile,
+             const gchar *arg_path,
+             const gchar *arg_dest_path,
              GVfsMetadata *daemon)
 {
   TreeInfo *info;
 
-  info = tree_info_lookup (treefile);
+  info = tree_info_lookup (arg_treefile);
   if (info == NULL)
     {
       g_dbus_method_invocation_return_error (invocation,
                                              G_IO_ERROR,
                                              G_IO_ERROR_NOT_FOUND,
                                              _("Can't find metadata file %s"),
-                                             treefile);
+                                             arg_treefile);
       return TRUE;
     }
 
   /* Overwrites any dest */
-  if (!meta_tree_copy (info->tree, path, dest_path))
+  if (!meta_tree_copy (info->tree, arg_path, arg_dest_path))
     {
       g_dbus_method_invocation_return_error_literal (invocation,
                                                      G_IO_ERROR,
@@ -388,7 +388,7 @@ handle_move (GVfsMetadata *object,
     }
 
   /* Remove source if copy succeeded (ignoring errors) */
-  meta_tree_remove (info->tree, path);
+  meta_tree_remove (info->tree, arg_path);
 
   tree_info_schedule_writeout (info);
   gvfs_metadata_complete_move (object, invocation);
