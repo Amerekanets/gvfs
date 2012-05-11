@@ -1920,8 +1920,6 @@ bus_acquired_handler_cb (GDBusConnection *conn,
 {
   GError *error;
   
-  g_warning ("Bus acquired at %s", name);
-
   if (! conn)
     return;
 
@@ -1977,7 +1975,6 @@ on_name_lost (GDBusConnection *connection,
               gpointer         user_data)
 {
   /* means that someone has claimed our name (we allow replacement) */
-  g_warning ("Got NameLost, some other instance replaced us");
   g_main_loop_quit (loop);
 }
 
@@ -1986,7 +1983,7 @@ on_name_acquired (GDBusConnection *connection,
                   const gchar     *name,
                   gpointer         user_data)
 {
-  g_warning ("Acquired the name %s on the session message bus\n", name);
+  /* acquired the name %s on the session message bus */
 }
 
 int

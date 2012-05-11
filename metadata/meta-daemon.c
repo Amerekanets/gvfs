@@ -403,8 +403,6 @@ on_name_acquired (GDBusConnection *connection,
 {
   GError *error;
   
-  g_warning ("Acquired the name %s on the session message bus\n", name);
-  
   skeleton = gvfs_metadata_skeleton_new ();
   
   g_signal_connect (skeleton, "handle-set", G_CALLBACK (handle_set), skeleton);
@@ -431,7 +429,6 @@ on_name_lost (GDBusConnection *connection,
   GMainLoop *loop = user_data;
 
   /* means that someone has claimed our name (we allow replacement) */
-  g_warning ("Got NameLost, some other instance replaced us");
   g_main_loop_quit (loop);
 }
 
