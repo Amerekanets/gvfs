@@ -441,7 +441,7 @@ on_name_owner_vanished (GDBusConnection *connection,
                         gpointer         user_data)
 {
   GList *l;
-  gulong name_watcher_id;
+  guint name_watcher_id;
   
   print_debug ("Name owner '%s' vanished", name);
 
@@ -482,7 +482,7 @@ on_name_owner_vanished (GDBusConnection *connection,
 
   /* unwatch the name */
   G_LOCK (unique_names_being_watched_lock);
-  name_watcher_id = (gulong) g_hash_table_lookup (unique_names_being_watched, name);
+  name_watcher_id = GPOINTER_TO_UINT (g_hash_table_lookup (unique_names_being_watched, name));
   if (name_watcher_id == 0)
     {
       g_warning ("Was asked to remove match rule for unique_name %s but we don't have one", name);
@@ -499,7 +499,7 @@ on_name_owner_vanished (GDBusConnection *connection,
 static void
 ensure_name_owner_changed_for_unique_name (GDBusMethodInvocation *invocation)
 {
-  gulong name_watcher_id;
+  guint name_watcher_id;
   const gchar *unique_name;
   
   unique_name = g_dbus_method_invocation_get_sender (invocation);
@@ -515,7 +515,7 @@ ensure_name_owner_changed_for_unique_name (GDBusMethodInvocation *invocation)
                                                     on_name_owner_vanished,
                                                     NULL,
                                                     NULL);
-  g_hash_table_insert (unique_names_being_watched, g_strdup (unique_name), (gpointer) name_watcher_id);
+  g_hash_table_insert (unique_names_being_watched, g_strdup (unique_name), GUINT_TO_POINTER (name_watcher_id));
 
  out:
   G_UNLOCK (unique_names_being_watched_lock);
