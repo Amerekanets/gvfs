@@ -543,7 +543,7 @@ static void monitor_try_create (void);
 #define DRIVE_STRUCT_TYPE "(sssbbbbbbbbuasa{ss}sa{sv})"
 
 static GVariant *
-append_drive (GDrive *drive)
+drive_to_dbus (GDrive *drive)
 {
   char *id;
   char *name;
@@ -679,7 +679,7 @@ append_drive (GDrive *drive)
 #define VOLUME_STRUCT_TYPE "(sssssbbssa{ss}sa{sv})"
 
 static GVariant *
-append_volume (GVolume *volume)
+volume_to_dbus (GVolume *volume)
 {
   char *id;
   char *name;
@@ -805,7 +805,7 @@ append_volume (GVolume *volume)
 #define MOUNT_STRUCT_TYPE "(sssssbsassa{sv})"
 
 static GVariant *
-append_mount (GMount *mount)
+mount_to_dbus (GMount *mount)
 {
   char *id;
   char *name;
@@ -911,13 +911,13 @@ handle_list (GVfsRemoteVolumeMonitor *object,
 
   drives_array = g_variant_builder_new (G_VARIANT_TYPE ("a" DRIVE_STRUCT_TYPE));
   for (l = drives; l; l = l->next)
-    g_variant_builder_add_value (drives_array, append_drive (l->data));
+    g_variant_builder_add_value (drives_array, drive_to_dbus (l->data));
   volumes_array = g_variant_builder_new (G_VARIANT_TYPE ("a" VOLUME_STRUCT_TYPE));
   for (l = volumes; l; l = l->next)
-    g_variant_builder_add_value (volumes_array, append_volume (l->data));
+    g_variant_builder_add_value (volumes_array, volume_to_dbus (l->data));
   mounts_array = g_variant_builder_new (G_VARIANT_TYPE ("a" MOUNT_STRUCT_TYPE));
   for (l = mounts; l; l = l->next)
-    g_variant_builder_add_value (mounts_array, append_mount (l->data));
+    g_variant_builder_add_value (mounts_array, mount_to_dbus (l->data));
 
   g_list_foreach (drives, (GFunc) g_object_unref, NULL);
   g_list_free (drives);
@@ -1749,14 +1749,14 @@ handle_cancel_operation (GVfsRemoteVolumeMonitor *object,
 
 /* ---------------------------------------------------------------------------------------------------- */
 
-typedef GVariant * (*AppendFunc) (void *object);
+typedef GVariant * (*MonitorDBusFunc) (void *object);
 typedef void (*MonitorSignalFunc) (GVfsRemoteVolumeMonitor *object, 
                                    const gchar *arg_dbus_name,
                                    const gchar *arg_id,
                                    GVariant *val);
 
 static void
-emit_signal (GVfsRemoteVolumeMonitor *instance, MonitorSignalFunc signal_func, void *object, AppendFunc func)
+emit_signal (GVfsRemoteVolumeMonitor *instance, MonitorSignalFunc signal_func, void *object, MonitorDBusFunc func)
 {
   char *id;
   GVariant *val;
@@ -1774,55 +1774,55 @@ emit_signal (GVfsRemoteVolumeMonitor *instance, MonitorSignalFunc signal_func, v
 static void
 drive_changed (GVolumeMonitor *monitor, GDrive *drive, GVfsRemoteVolumeMonitor *instance)
 {
-  emit_signal (instance, (MonitorSignalFunc) gvfs_remote_volume_monitor_emit_drive_changed, drive, (AppendFunc) append_drive);
+  emit_signal (instance, (MonitorSignalFunc) gvfs_remote_volume_monitor_emit_drive_changed, drive, (MonitorDBusFunc) drive_to_dbus);
 }
 
 static void
 drive_connected (GVolumeMonitor *monitor, GDrive *drive, GVfsRemoteVolumeMonitor *instance)
 {
-  emit_signal (instance, (MonitorSignalFunc) gvfs_remote_volume_monitor_emit_drive_connected, drive, (AppendFunc) append_drive);
+  emit_signal (instance, (MonitorSignalFunc) gvfs_remote_volume_monitor_emit_drive_connected, drive, (MonitorDBusFunc) drive_to_dbus);
 }
 
 static void
 drive_disconnected (GVolumeMonitor *monitor, GDrive *drive, GVfsRemoteVolumeMonitor *instance)
 {
-  emit_signal (instance, (MonitorSignalFunc) gvfs_remote_volume_monitor_emit_drive_disconnected, drive, (AppendFunc) append_drive);
+  emit_signal (instance, (MonitorSignalFunc) gvfs_remote_volume_monitor_emit_drive_disconnected, drive, (MonitorDBusFunc) drive_to_dbus);
 }
 
 static void
 drive_eject_button (GVolumeMonitor *monitor, GDrive *drive, GVfsRemoteVolumeMonitor *instance)
 {
-  emit_signal (instance, (MonitorSignalFunc) gvfs_remote_volume_monitor_emit_drive_eject_button, drive, (AppendFunc) append_drive);
+  emit_signal (instance, (MonitorSignalFunc) gvfs_remote_volume_monitor_emit_drive_eject_button, drive, (MonitorDBusFunc) drive_to_dbus);
 }
 
 static void
 drive_stop_button (GVolumeMonitor *monitor, GDrive *drive, GVfsRemoteVolumeMonitor *instance)
 {
-  emit_signal (instance, (MonitorSignalFunc) gvfs_remote_volume_monitor_emit_drive_stop_button, drive, (AppendFunc) append_drive);
+  emit_signal (instance, (MonitorSignalFunc) gvfs_remote_volume_monitor_emit_drive_stop_button, drive, (MonitorDBusFunc) drive_to_dbus);
 }
 
 static void
 volume_changed (GVolumeMonitor *monitor, GVolume *volume, GVfsRemoteVolumeMonitor *instance)
 {
-  emit_signal (instance, (MonitorSignalFunc) gvfs_remote_volume_monitor_emit_volume_changed, volume, (AppendFunc) append_volume);
+  emit_signal (instance, (MonitorSignalFunc) gvfs_remote_volume_monitor_emit_volume_changed, volume, (MonitorDBusFunc) volume_to_dbus);
 }
 
 static void
 volume_added (GVolumeMonitor *monitor, GVolume *volume, GVfsRemoteVolumeMonitor *instance)
 {
-  emit_signal (instance, (MonitorSignalFunc) gvfs_remote_volume_monitor_emit_volume_added, volume, (AppendFunc) append_volume);
+  emit_signal (instance, (MonitorSignalFunc) gvfs_remote_volume_monitor_emit_volume_added, volume, (MonitorDBusFunc) volume_to_dbus);
 }
 
 static void
 volume_removed (GVolumeMonitor *monitor, GVolume *volume, GVfsRemoteVolumeMonitor *instance)
 {
-  emit_signal (instance, (MonitorSignalFunc) gvfs_remote_volume_monitor_emit_volume_removed, volume, (AppendFunc) append_volume);
+  emit_signal (instance, (MonitorSignalFunc) gvfs_remote_volume_monitor_emit_volume_removed, volume, (MonitorDBusFunc) volume_to_dbus);
 }
 
 static void
 mount_changed (GVolumeMonitor *monitor, GMount *mount, GVfsRemoteVolumeMonitor *instance)
 {
-  emit_signal (instance, (MonitorSignalFunc) gvfs_remote_volume_monitor_emit_mount_changed, mount, (AppendFunc) append_mount);
+  emit_signal (instance, (MonitorSignalFunc) gvfs_remote_volume_monitor_emit_mount_changed, mount, (MonitorDBusFunc) mount_to_dbus);
 }
 
 static void
@@ -1837,19 +1837,19 @@ static void
 mount_added (GVolumeMonitor *monitor, GMount *mount, GVfsRemoteVolumeMonitor *instance)
 {
   mount_sniff_x_content_type (mount);
-  emit_signal (instance, (MonitorSignalFunc) gvfs_remote_volume_monitor_emit_mount_added, mount, (AppendFunc) append_mount);
+  emit_signal (instance, (MonitorSignalFunc) gvfs_remote_volume_monitor_emit_mount_added, mount, (MonitorDBusFunc) mount_to_dbus);
 }
 
 static void
 mount_pre_unmount (GVolumeMonitor *monitor, GMount *mount, GVfsRemoteVolumeMonitor *instance)
 {
-  emit_signal (instance, (MonitorSignalFunc) gvfs_remote_volume_monitor_emit_mount_pre_unmount, mount, (AppendFunc) append_mount);
+  emit_signal (instance, (MonitorSignalFunc) gvfs_remote_volume_monitor_emit_mount_pre_unmount, mount, (MonitorDBusFunc) mount_to_dbus);
 }
 
 static void
 mount_removed (GVolumeMonitor *monitor, GMount *mount, GVfsRemoteVolumeMonitor *instance)
 {
-  emit_signal (instance, (MonitorSignalFunc) gvfs_remote_volume_monitor_emit_mount_removed, mount, (AppendFunc) append_mount);
+  emit_signal (instance, (MonitorSignalFunc) gvfs_remote_volume_monitor_emit_mount_removed, mount, (MonitorDBusFunc) mount_to_dbus);
 }
 
 void
