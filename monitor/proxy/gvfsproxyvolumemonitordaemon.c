@@ -1686,10 +1686,13 @@ handle_is_supported (GVfsRemoteVolumeMonitor *object,
   if (monitor == NULL)
     monitor_try_create ();
 
-  /* If someone is calling into this object and interface, start watching their name so
-   * we can cancel operations initiated by them when they disconnect
-   */
-  ensure_name_owner_changed_for_unique_name (invocation);
+  if (monitor != NULL)
+    {
+      /* If someone is calling into this object and interface, start watching their name so
+       * we can cancel operations initiated by them when they disconnect
+       */
+      ensure_name_owner_changed_for_unique_name (invocation);
+    }
   
   gvfs_remote_volume_monitor_complete_is_supported (object, invocation,
                                                     monitor != NULL);
