@@ -167,15 +167,8 @@ ask_password_cb (GMountOperation          *mount_operation,
   if (default_domain == NULL)
     default_domain = "";
 
-  error = NULL;
-  connection = g_bus_get_sync (G_BUS_TYPE_SESSION, NULL, &error);
-  if (connection == NULL)
-    {
-      g_printerr ("Error getting session bus: %s (%s, %d)\n",
-                  error->message, g_quark_to_string (error->domain), error->code);
-      g_error_free (error);
-      goto out;
-    }
+  connection = g_dbus_interface_skeleton_get_connection (G_DBUS_INTERFACE_SKELETON (monitor));
+  g_assert (connection != NULL);
   
   error = NULL;
   if (!g_dbus_connection_emit_signal (connection,
@@ -195,12 +188,7 @@ ask_password_cb (GMountOperation          *mount_operation,
       g_printerr ("Error emitting signal: %s (%s, %d)\n",
                   error->message, g_quark_to_string (error->domain), error->code);
       g_error_free (error);
-      goto out;
     }
-
-  out:
-   if (connection != NULL)
-     g_object_unref (connection);
 }
 
 static void
@@ -230,15 +218,8 @@ ask_question_cb (GMountOperation          *mount_operation,
       g_variant_builder_add (choices_array, "s", choices[n]);
     }
 
-  error = NULL;
-  connection = g_bus_get_sync (G_BUS_TYPE_SESSION, NULL, &error);
-  if (connection == NULL)
-    {
-      g_printerr ("Error getting session bus: %s (%s, %d)\n",
-                  error->message, g_quark_to_string (error->domain), error->code);
-      g_error_free (error);
-      goto out;
-    }
+  connection = g_dbus_interface_skeleton_get_connection (G_DBUS_INTERFACE_SKELETON (monitor));
+  g_assert (connection != NULL);
   
   error = NULL;
   if (!g_dbus_connection_emit_signal (connection,
@@ -256,13 +237,9 @@ ask_question_cb (GMountOperation          *mount_operation,
       g_printerr ("Error emitting signal: %s (%s, %d)\n",
                   error->message, g_quark_to_string (error->domain), error->code);
       g_error_free (error);
-      goto out;
     }
 
-  out:
-   g_variant_builder_unref (choices_array);
-   if (connection != NULL)
-     g_object_unref (connection);
+  g_variant_builder_unref (choices_array);
 }
 
 static void
@@ -304,15 +281,8 @@ show_processes_cb (GMountOperation          *mount_operation,
       g_variant_builder_add (choices_array, "s", choices[n]);
     }
 
-  error = NULL;
-  connection = g_bus_get_sync (G_BUS_TYPE_SESSION, NULL, &error);
-  if (connection == NULL)
-    {
-      g_printerr ("Error getting session bus: %s (%s, %d)\n",
-                  error->message, g_quark_to_string (error->domain), error->code);
-      g_error_free (error);
-      goto out;
-    }
+  connection = g_dbus_interface_skeleton_get_connection (G_DBUS_INTERFACE_SKELETON (monitor));
+  g_assert (connection != NULL);
   
   error = NULL;
   if (!g_dbus_connection_emit_signal (connection,
@@ -331,14 +301,10 @@ show_processes_cb (GMountOperation          *mount_operation,
       g_printerr ("Error emitting signal: %s (%s, %d)\n",
                   error->message, g_quark_to_string (error->domain), error->code);
       g_error_free (error);
-      goto out;
     }
 
-  out:
-   g_variant_builder_unref (pids);
-   g_variant_builder_unref (choices_array);
-   if (connection != NULL)
-     g_object_unref (connection);
+  g_variant_builder_unref (pids);
+  g_variant_builder_unref (choices_array);
 }
 
 static void
@@ -355,15 +321,8 @@ aborted_cb (GMountOperation         *mount_operation,
   mount_op_id = g_object_get_data (G_OBJECT (mount_operation), "mount_op_id");
   mount_op_owner = g_object_get_data (G_OBJECT (mount_operation), "mount_op_owner");
 
-  error = NULL;
-  connection = g_bus_get_sync (G_BUS_TYPE_SESSION, NULL, &error);
-  if (connection == NULL)
-    {
-      g_printerr ("Error getting session bus: %s (%s, %d)\n",
-                  error->message, g_quark_to_string (error->domain), error->code);
-      g_error_free (error);
-      goto out;
-    }
+  connection = g_dbus_interface_skeleton_get_connection (G_DBUS_INTERFACE_SKELETON (monitor));
+  g_assert (connection != NULL);
   
   error = NULL;
   if (!g_dbus_connection_emit_signal (connection,
@@ -379,12 +338,7 @@ aborted_cb (GMountOperation         *mount_operation,
       g_printerr ("Error emitting signal: %s (%s, %d)\n",
                   error->message, g_quark_to_string (error->domain), error->code);
       g_error_free (error);
-      goto out;
     }
-
-  out:
-   if (connection != NULL)
-     g_object_unref (connection);
 }
 
 static void
