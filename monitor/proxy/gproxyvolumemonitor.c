@@ -841,16 +841,6 @@ on_name_owner_appeared (GDBusConnection *connection,
   GProxyVolume *volume;
   GProxyMount *mount;
 
-#if 0
-  GProxyVolumeMonitorClass *klass;
-  
-  klass = G_PROXY_VOLUME_MONITOR_CLASS (G_OBJECT_GET_CLASS (monitor));
-
-  g_warning ("New owner %s for volume monitor %s connected to the bus; seeding drives/volumes/mounts",
-             name_owner,
-             klass->dbus_name);
-#endif
-
   seed_monitor (monitor);
 
   /* emit signals for all the drives/volumes/mounts "added" */
