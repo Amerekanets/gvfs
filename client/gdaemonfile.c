@@ -55,6 +55,8 @@ G_DEFINE_TYPE_WITH_CODE (GDaemonFile, g_daemon_file, G_TYPE_OBJECT,
 			 G_IMPLEMENT_INTERFACE (G_TYPE_FILE,
 						g_daemon_file_file_iface_init))
 
+static GPrivate metadata_proxy = G_PRIVATE_INIT (g_object_unref);
+
 static void
 g_daemon_file_finalize (GObject *object)
 {
@@ -2207,6 +2209,26 @@ g_daemon_file_query_writable_namespaces (GFile                      *file,
   return list;
 }
 
+static GVfsMetadata *
+get_metadata_proxy (GCancellable *cancellable, GError **error)
+{
+  GVfsMetadata *proxy;
+
+  proxy = g_private_get (&metadata_proxy);
+  if (proxy == NULL)
+    {
+      proxy = gvfs_metadata_proxy_new_for_bus_sync (G_BUS_TYPE_SESSION,
+                                                    G_DBUS_PROXY_FLAGS_NONE,
+                                                    G_VFS_DBUS_METADATA_NAME,
+                                                    G_VFS_DBUS_METADATA_PATH,
+                                                    cancellable,
+                                                    error);
+      g_private_replace (&metadata_proxy, proxy);
+    }
+
+  return proxy;
+}
+
 static gboolean
 set_metadata_attribute (GFile *file,
 			const char *attribute,
@@ -2231,12 +2253,7 @@ set_metadata_attribute (GFile *file,
   g_free (treename);
   
   res = FALSE;
-  proxy = gvfs_metadata_proxy_new_for_bus_sync (G_BUS_TYPE_SESSION,
-                                                G_DBUS_PROXY_FLAGS_NONE,
-                                                G_VFS_DBUS_METADATA_NAME,
-                                                G_VFS_DBUS_METADATA_PATH,
-                                                cancellable,
-                                                error);
+  proxy = get_metadata_proxy (cancellable, error);
 
   if (proxy)
     {
@@ -2270,7 +2287,6 @@ set_metadata_attribute (GFile *file,
         res = FALSE;
 
       g_variant_builder_unref (builder);
-      g_object_unref (proxy);
     }
 
   meta_tree_unref (tree);

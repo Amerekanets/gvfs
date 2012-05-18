@@ -77,6 +77,7 @@ struct _GDaemonVfsClass
 G_DEFINE_DYNAMIC_TYPE (GDaemonVfs, g_daemon_vfs, G_TYPE_VFS)
 
 static GDaemonVfs *the_vfs = NULL;
+static GPrivate metadata_proxy = G_PRIVATE_INIT (g_object_unref);
 
 G_LOCK_DEFINE_STATIC(mount_cache);
 
@@ -1281,6 +1282,26 @@ _g_daemon_vfs_append_metadata_for_set (GVariantBuilder *builder,
   return res;
 }
 
+static GVfsMetadata *
+get_metadata_proxy (GError **error)
+{
+  GVfsMetadata *proxy;
+
+  proxy = g_private_get (&metadata_proxy);
+  if (proxy == NULL)
+    {
+      proxy = gvfs_metadata_proxy_new_for_bus_sync (G_BUS_TYPE_SESSION,
+                                                    G_DBUS_PROXY_FLAGS_NONE,
+                                                    G_VFS_DBUS_METADATA_NAME,
+                                                    G_VFS_DBUS_METADATA_PATH,
+                                                    NULL,
+                                                    error);
+      g_private_replace (&metadata_proxy, proxy);
+    }
+
+  return proxy;
+}
+
 static gboolean
 g_daemon_vfs_local_file_set_attributes (GVfs       *vfs,
 					const char *filename,
@@ -1333,13 +1354,7 @@ g_daemon_vfs_local_file_set_attributes (GVfs       *vfs,
 						FALSE,
 						&tree_path);
 	  
-	  proxy = gvfs_metadata_proxy_new_for_bus_sync (G_BUS_TYPE_SESSION,
-	                                                G_DBUS_PROXY_FLAGS_NONE,
-	                                                G_VFS_DBUS_METADATA_NAME,
-	                                                G_VFS_DBUS_METADATA_PATH,
-	                                                NULL,
-	                                                error);
-
+	  proxy = get_metadata_proxy (error);
 	  if (proxy == NULL)
 	    {
 	      res = FALSE;
@@ -1397,7 +1412,6 @@ g_daemon_vfs_local_file_set_attributes (GVfs       *vfs,
                 }
 
 	      g_variant_builder_unref (builder);
-	      g_object_unref (proxy);
 	      
               meta_lookup_cache_free (cache);
               meta_tree_unref (tree);
@@ -1429,13 +1443,7 @@ g_daemon_vfs_local_file_removed (GVfs       *vfs,
 					&tree_path);
   if (tree)
     {
-      proxy = gvfs_metadata_proxy_new_for_bus_sync (G_BUS_TYPE_SESSION,
-                                                    G_DBUS_PROXY_FLAGS_NONE,
-                                                    G_VFS_DBUS_METADATA_NAME,
-                                                    G_VFS_DBUS_METADATA_PATH,
-                                                    NULL,
-                                                    NULL);
-
+      proxy = get_metadata_proxy (NULL);
       if (proxy)
         {
           metatreefile = meta_tree_get_filename (tree);
@@ -1444,7 +1452,6 @@ g_daemon_vfs_local_file_removed (GVfs       *vfs,
                                           tree_path,
                                           NULL,
                                           NULL);
-          g_object_unref (proxy);
         }
       
       meta_tree_unref (tree);
@@ -1478,13 +1485,7 @@ g_daemon_vfs_local_file_moved (GVfs       *vfs,
 					 &tree_path2);
   if (tree1 && tree2 && tree1 == tree2)
     {
-      proxy = gvfs_metadata_proxy_new_for_bus_sync (G_BUS_TYPE_SESSION,
-                                                    G_DBUS_PROXY_FLAGS_NONE,
-                                                    G_VFS_DBUS_METADATA_NAME,
-                                                    G_VFS_DBUS_METADATA_PATH,
-                                                    NULL,
-                                                    NULL);
-
+      proxy = get_metadata_proxy (NULL);
       if (proxy)
         {
           metatreefile = meta_tree_get_filename (tree1);
@@ -1494,7 +1495,6 @@ g_daemon_vfs_local_file_moved (GVfs       *vfs,
                                         tree_path2,
                                         NULL,
                                         NULL);
-          g_object_unref (proxy);
         }
     }
 
