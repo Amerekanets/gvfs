@@ -2209,10 +2209,23 @@ g_daemon_file_query_writable_namespaces (GFile                      *file,
   return list;
 }
 
+static void
+metadata_daemon_vanished (GDBusConnection *connection,
+                          const gchar *name,
+                          gpointer user_data)
+{
+  guint *watcher_id = user_data;
+
+  g_private_replace (&metadata_proxy, NULL);
+  if (*watcher_id > 0)
+    g_bus_unwatch_name (*watcher_id);
+}
+
 static GVfsMetadata *
 get_metadata_proxy (GCancellable *cancellable, GError **error)
 {
   GVfsMetadata *proxy;
+  guint *watcher_id;
 
   proxy = g_private_get (&metadata_proxy);
   if (proxy == NULL)
@@ -2224,6 +2237,19 @@ get_metadata_proxy (GCancellable *cancellable, GError **error)
                                                     cancellable,
                                                     error);
       g_private_replace (&metadata_proxy, proxy);
+
+      if (proxy == NULL)
+        return NULL;
+
+      /* a place in memory to store the returned ID in */
+      watcher_id = g_malloc0 (sizeof (guint));
+      *watcher_id = g_bus_watch_name_on_connection (g_dbus_proxy_get_connection (G_DBUS_PROXY (proxy)),
+                                                    G_VFS_DBUS_METADATA_NAME,
+                                                    G_BUS_NAME_WATCHER_FLAGS_AUTO_START,
+                                                    NULL,
+                                                    metadata_daemon_vanished,
+                                                    watcher_id,
+                                                    g_free);
     }
 
   return proxy;
