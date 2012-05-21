@@ -44,10 +44,6 @@ static GHashTable *unique_names_being_watched = NULL;
 
 static GVfsRemoteVolumeMonitor *monitor_daemon = NULL;
 
-G_LOCK_DEFINE_STATIC (outstanding_ops_lock);
-G_LOCK_DEFINE_STATIC (outstanding_mount_op_objects_lock);
-G_LOCK_DEFINE_STATIC (unique_names_being_watched_lock);
-
 #define DEBUG_ENABLED
 
 #ifdef DEBUG_ENABLED
@@ -345,9 +341,7 @@ static void
 mount_op_destroyed_cb (gpointer user_data,
                        GObject *where_the_mount_op_was)
 {
-  G_LOCK (outstanding_mount_op_objects_lock);
   outstanding_mount_op_objects = g_list_remove (outstanding_mount_op_objects, where_the_mount_op_was);
-  G_UNLOCK (outstanding_mount_op_objects_lock);
 }
 
 static GMountOperation *
@@ -366,9 +360,7 @@ wrap_mount_op (const gchar *mount_op_id,
   g_object_set_data_full (G_OBJECT (op), "mount_op_id", g_strdup (mount_op_id), g_free);
   g_object_set_data_full (G_OBJECT (op), "mount_op_owner", g_strdup (mount_op_owner), g_free);
 
-  G_LOCK (outstanding_mount_op_objects_lock);
   outstanding_mount_op_objects = g_list_prepend (outstanding_mount_op_objects, op);
-  G_UNLOCK (outstanding_mount_op_objects_lock);
 
   g_object_weak_ref (G_OBJECT (op),
                      mount_op_destroyed_cb,
@@ -384,9 +376,7 @@ static void
 cancellable_destroyed_cb (gpointer user_data,
                           GObject *where_the_cancellable_was)
 {
-  G_LOCK (outstanding_ops_lock);
   outstanding_ops = g_list_remove (outstanding_ops, where_the_cancellable_was);
-  G_UNLOCK (outstanding_ops_lock);
 }
 
 static void
@@ -400,7 +390,6 @@ on_name_owner_vanished (GDBusConnection *connection,
   print_debug ("Name owner '%s' vanished", name);
 
   /* if @name has outstanding mount operation objects; abort them */
-  G_LOCK (outstanding_mount_op_objects_lock);
   for (l = outstanding_mount_op_objects; l != NULL; l = l->next)
     {
       GMountOperation *op = G_MOUNT_OPERATION (l->data);
@@ -414,10 +403,8 @@ on_name_owner_vanished (GDBusConnection *connection,
           g_mount_operation_reply (op, G_MOUNT_OPERATION_ABORTED);
         }
     }
-  G_UNLOCK (outstanding_mount_op_objects_lock);
 
   /* see if @name has outstanding ops; if so, cancel them */
-  G_LOCK (outstanding_ops_lock);
   for (l = outstanding_ops; l != NULL; l = l->next)
     {
       GCancellable *cancellable = G_CANCELLABLE (l->data);
@@ -432,10 +419,8 @@ on_name_owner_vanished (GDBusConnection *connection,
           g_cancellable_cancel (cancellable);
         }
     }
-  G_UNLOCK (outstanding_ops_lock);
 
   /* unwatch the name */
-  G_LOCK (unique_names_being_watched_lock);
   name_watcher_id = GPOINTER_TO_UINT (g_hash_table_lookup (unique_names_being_watched, name));
   if (name_watcher_id == 0)
     {
@@ -447,7 +432,6 @@ on_name_owner_vanished (GDBusConnection *connection,
     }
 
   g_hash_table_remove (unique_names_being_watched, name);
-  G_UNLOCK (unique_names_being_watched_lock);
 }
 
 static void
@@ -458,9 +442,8 @@ ensure_name_owner_changed_for_unique_name (GDBusMethodInvocation *invocation)
   
   unique_name = g_dbus_method_invocation_get_sender (invocation);
 
-  G_LOCK (unique_names_being_watched_lock);
   if (g_hash_table_lookup (unique_names_being_watched, unique_name) != NULL)
-    goto out;
+    return;
   
   name_watcher_id = g_bus_watch_name_on_connection (g_dbus_method_invocation_get_connection (invocation),
                                                     unique_name,
@@ -470,9 +453,6 @@ ensure_name_owner_changed_for_unique_name (GDBusMethodInvocation *invocation)
                                                     NULL,
                                                     NULL);
   g_hash_table_insert (unique_names_being_watched, g_strdup (unique_name), GUINT_TO_POINTER (name_watcher_id));
-
- out:
-  G_UNLOCK (unique_names_being_watched_lock);
 }
 
 static void monitor_try_create (void);
@@ -976,9 +956,7 @@ handle_mount_unmount (GVfsRemoteVolumeMonitor *object,
   g_object_set_data_full (G_OBJECT (mount), "cancellable", cancellable, g_object_unref);
   g_object_set_data_full (G_OBJECT (cancellable), "owner", g_strdup (sender), g_free);
   g_object_set_data_full (G_OBJECT (cancellable), "cancellation_id", g_strdup (arg_cancellation_id), g_free);
-  G_LOCK (outstanding_ops_lock);
   outstanding_ops = g_list_prepend (outstanding_ops, cancellable);
-  G_UNLOCK (outstanding_ops_lock);
   g_object_weak_ref (G_OBJECT (cancellable),
                      cancellable_destroyed_cb,
                      NULL);
@@ -1036,7 +1014,6 @@ handle_mount_op_reply (GVfsRemoteVolumeMonitor *object,
   /* Find the op */
   mount_operation = NULL;
 
-  G_LOCK (outstanding_mount_op_objects_lock);
   for (l = outstanding_mount_op_objects; l != NULL; l = l->next)
     {
       GMountOperation *op = G_MOUNT_OPERATION (l->data);
@@ -1052,7 +1029,6 @@ handle_mount_op_reply (GVfsRemoteVolumeMonitor *object,
           break;
         }
     }
-  G_UNLOCK (outstanding_mount_op_objects_lock);
 
   if (mount_operation == NULL)
     {
@@ -1169,9 +1145,7 @@ handle_volume_mount (GVfsRemoteVolumeMonitor *object,
   g_object_set_data_full (G_OBJECT (volume), "cancellable", cancellable, g_object_unref);
   g_object_set_data_full (G_OBJECT (cancellable), "owner", g_strdup (sender), g_free);
   g_object_set_data_full (G_OBJECT (cancellable), "cancellation_id", g_strdup (arg_cancellation_id), g_free);
-  G_LOCK (outstanding_ops_lock);
   outstanding_ops = g_list_prepend (outstanding_ops, cancellable);
-  G_UNLOCK (outstanding_ops_lock);
   g_object_weak_ref (G_OBJECT (cancellable),
                      cancellable_destroyed_cb,
                      NULL);
@@ -1274,9 +1248,7 @@ handle_drive_eject (GVfsRemoteVolumeMonitor *object,
   g_object_set_data_full (G_OBJECT (drive), "cancellable", cancellable, g_object_unref);
   g_object_set_data_full (G_OBJECT (cancellable), "owner", g_strdup (sender), g_free);
   g_object_set_data_full (G_OBJECT (cancellable), "cancellation_id", g_strdup (arg_cancellation_id), g_free);
-  G_LOCK (outstanding_ops_lock);
   outstanding_ops = g_list_prepend (outstanding_ops, cancellable);
-  G_UNLOCK (outstanding_ops_lock);
   g_object_weak_ref (G_OBJECT (cancellable),
                      cancellable_destroyed_cb,
                      NULL);
@@ -1386,9 +1358,7 @@ handle_drive_stop (GVfsRemoteVolumeMonitor *object,
   g_object_set_data_full (G_OBJECT (drive), "cancellable", cancellable, g_object_unref);
   g_object_set_data_full (G_OBJECT (cancellable), "owner", g_strdup (sender), g_free);
   g_object_set_data_full (G_OBJECT (cancellable), "cancellation_id", g_strdup (arg_cancellation_id), g_free);
-  G_LOCK (outstanding_ops_lock);
   outstanding_ops = g_list_prepend (outstanding_ops, cancellable);
-  G_UNLOCK (outstanding_ops_lock);
   g_object_weak_ref (G_OBJECT (cancellable),
                      cancellable_destroyed_cb,
                      NULL);
@@ -1505,9 +1475,7 @@ handle_drive_start (GVfsRemoteVolumeMonitor *object,
   g_object_set_data_full (G_OBJECT (drive), "cancellable", cancellable, g_object_unref);
   g_object_set_data_full (G_OBJECT (cancellable), "owner", g_strdup (sender), g_free);
   g_object_set_data_full (G_OBJECT (cancellable), "cancellation_id", g_strdup (arg_cancellation_id), g_free);
-  G_LOCK (outstanding_ops_lock);
   outstanding_ops = g_list_prepend (outstanding_ops, cancellable);
-  G_UNLOCK (outstanding_ops_lock);
   g_object_weak_ref (G_OBJECT (cancellable),
                      cancellable_destroyed_cb,
                      NULL);
@@ -1606,9 +1574,7 @@ handle_drive_poll_for_media (GVfsRemoteVolumeMonitor *object,
   g_object_set_data_full (G_OBJECT (drive), "cancellable", cancellable, g_object_unref);
   g_object_set_data_full (G_OBJECT (cancellable), "owner", g_strdup (sender), g_free);
   g_object_set_data_full (G_OBJECT (cancellable), "cancellation_id", g_strdup (arg_cancellation_id), g_free);
-  G_LOCK (outstanding_ops_lock);
   outstanding_ops = g_list_prepend (outstanding_ops, cancellable);
-  G_UNLOCK (outstanding_ops_lock);
   g_object_weak_ref (G_OBJECT (cancellable),
                      cancellable_destroyed_cb,
                      NULL);
@@ -1673,7 +1639,6 @@ handle_cancel_operation (GVfsRemoteVolumeMonitor *object,
   print_debug ("in handle_cancel_operation");
 
   /* Find GCancellable to cancel */
-  G_LOCK (outstanding_ops_lock);
   for (l = outstanding_ops; l != NULL; l = l->next)
     {
       GCancellable *cancellable = G_CANCELLABLE (l->data);
@@ -1691,7 +1656,6 @@ handle_cancel_operation (GVfsRemoteVolumeMonitor *object,
           break;
         }
     }
-  G_UNLOCK (outstanding_ops_lock);
 
   if (!was_cancelled)
     g_warning ("didn't find op to cancel");
