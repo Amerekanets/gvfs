@@ -1452,6 +1452,14 @@ g_daemon_vfs_local_file_set_attributes (GVfs       *vfs,
 }
 
 static void
+metadata_remove_cb (GVfsMetadata *proxy,
+                    GAsyncResult *res,
+                    gpointer user_data)
+{
+  gvfs_metadata_call_remove_finish (proxy, res, NULL);
+}
+
+static void
 g_daemon_vfs_local_file_removed (GVfs       *vfs,
 				 const char *filename)
 {
@@ -1473,11 +1481,13 @@ g_daemon_vfs_local_file_removed (GVfs       *vfs,
       if (proxy)
         {
           metatreefile = meta_tree_get_filename (tree);
-          gvfs_metadata_call_remove_sync (proxy,
-                                          metatreefile,
-                                          tree_path,
-                                          NULL,
-                                          NULL);
+          /* we don't care about the result, let's queue the call and don't block */
+          gvfs_metadata_call_remove (proxy,
+                                     metatreefile,
+                                     tree_path,
+                                     NULL,
+                                     (GAsyncReadyCallback) metadata_remove_cb,
+                                     NULL);
         }
       
       meta_tree_unref (tree);
@@ -1485,6 +1495,14 @@ g_daemon_vfs_local_file_removed (GVfs       *vfs,
     }
 
   meta_lookup_cache_free (cache);
+}
+
+static void
+metadata_move_cb (GVfsMetadata *proxy,
+                  GAsyncResult *res,
+                  gpointer user_data)
+{
+  gvfs_metadata_call_move_finish (proxy, res, NULL);
 }
 
 static void
@@ -1515,12 +1533,14 @@ g_daemon_vfs_local_file_moved (GVfs       *vfs,
       if (proxy)
         {
           metatreefile = meta_tree_get_filename (tree1);
-          gvfs_metadata_call_move_sync (proxy,
-                                        metatreefile,
-                                        tree_path1,
-                                        tree_path2,
-                                        NULL,
-                                        NULL);
+          /* we don't care about the result, let's queue the call and don't block */
+          gvfs_metadata_call_move (proxy,
+                                   metatreefile,
+                                   tree_path1,
+                                   tree_path2,
+                                   NULL,
+                                   (GAsyncReadyCallback) metadata_move_cb,
+                                   NULL);
         }
     }
 
