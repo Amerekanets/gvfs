@@ -74,10 +74,6 @@ GProxyMount     *g_proxy_volume_monitor_get_mount_for_id  (GProxyVolumeMonitor *
                                                           const char          *id);
 GVfsRemoteVolumeMonitor *g_proxy_volume_monitor_get_dbus_proxy (GProxyVolumeMonitor *volume_monitor);
 
-/* This is to avoid -Wunused-variable warnings when lock is defined as static in public header file */
-void             g_proxy_volume_monitor_lock_for_timeout   (void);
-void             g_proxy_volume_monitor_unlock_for_timeout (void);
-
 void g_proxy_volume_monitor_teardown_session_bus_connection (void);
 
 

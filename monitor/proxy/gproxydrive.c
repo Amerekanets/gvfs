@@ -635,7 +635,6 @@ g_proxy_drive_eject_with_operation (GDrive              *drive,
     }
 
   proxy = g_proxy_volume_monitor_get_dbus_proxy (data->drive->volume_monitor);
-  g_proxy_volume_monitor_lock_for_timeout ();
   g_dbus_proxy_set_default_timeout (G_DBUS_PROXY (proxy), G_PROXY_VOLUME_MONITOR_DBUS_TIMEOUT);  /* 30 minute timeout */
   
   gvfs_remote_volume_monitor_call_drive_eject (proxy,
@@ -648,7 +647,6 @@ g_proxy_drive_eject_with_operation (GDrive              *drive,
                                                data);
 
   g_dbus_proxy_set_default_timeout (G_DBUS_PROXY (proxy), -1);
-  g_proxy_volume_monitor_unlock_for_timeout ();
   g_object_unref (proxy);
 
   G_UNLOCK (proxy_drive);
@@ -787,7 +785,6 @@ g_proxy_drive_stop (GDrive              *drive,
     }
 
   proxy = g_proxy_volume_monitor_get_dbus_proxy (data->drive->volume_monitor);
-  g_proxy_volume_monitor_lock_for_timeout ();
   g_dbus_proxy_set_default_timeout (G_DBUS_PROXY (proxy), G_PROXY_VOLUME_MONITOR_DBUS_TIMEOUT);  /* 30 minute timeout */
 
   gvfs_remote_volume_monitor_call_drive_stop (proxy,
@@ -800,7 +797,6 @@ g_proxy_drive_stop (GDrive              *drive,
                                               data);
   
   g_dbus_proxy_set_default_timeout (G_DBUS_PROXY (proxy), -1);
-  g_proxy_volume_monitor_unlock_for_timeout ();
   g_object_unref (proxy);
 
   G_UNLOCK (proxy_drive);
@@ -965,7 +961,6 @@ g_proxy_drive_start (GDrive              *drive,
   data->mount_op_id = g_proxy_mount_operation_wrap (mount_operation, proxy_drive->volume_monitor);
 
   proxy = g_proxy_volume_monitor_get_dbus_proxy (data->drive->volume_monitor);
-  g_proxy_volume_monitor_lock_for_timeout ();
   g_dbus_proxy_set_default_timeout (G_DBUS_PROXY (proxy), G_PROXY_VOLUME_MONITOR_DBUS_TIMEOUT);  /* 30 minute timeout */
 
   gvfs_remote_volume_monitor_call_drive_start (proxy,
@@ -978,7 +973,6 @@ g_proxy_drive_start (GDrive              *drive,
                                                data);
 
   g_dbus_proxy_set_default_timeout (G_DBUS_PROXY (proxy), -1);
-  g_proxy_volume_monitor_unlock_for_timeout ();
   g_object_unref (proxy);
 
   G_UNLOCK (proxy_drive);
