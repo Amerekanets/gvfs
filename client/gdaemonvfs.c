@@ -1452,14 +1452,6 @@ g_daemon_vfs_local_file_set_attributes (GVfs       *vfs,
 }
 
 static void
-metadata_remove_cb (GVfsMetadata *proxy,
-                    GAsyncResult *res,
-                    gpointer user_data)
-{
-  gvfs_metadata_call_remove_finish (proxy, res, NULL);
-}
-
-static void
 g_daemon_vfs_local_file_removed (GVfs       *vfs,
 				 const char *filename)
 {
@@ -1486,7 +1478,7 @@ g_daemon_vfs_local_file_removed (GVfs       *vfs,
                                      metatreefile,
                                      tree_path,
                                      NULL,
-                                     (GAsyncReadyCallback) metadata_remove_cb,
+                                     NULL, /* callback */
                                      NULL);
         }
       
@@ -1495,14 +1487,6 @@ g_daemon_vfs_local_file_removed (GVfs       *vfs,
     }
 
   meta_lookup_cache_free (cache);
-}
-
-static void
-metadata_move_cb (GVfsMetadata *proxy,
-                  GAsyncResult *res,
-                  gpointer user_data)
-{
-  gvfs_metadata_call_move_finish (proxy, res, NULL);
 }
 
 static void
@@ -1539,7 +1523,7 @@ g_daemon_vfs_local_file_moved (GVfs       *vfs,
                                    tree_path1,
                                    tree_path2,
                                    NULL,
-                                   (GAsyncReadyCallback) metadata_move_cb,
+                                   NULL, /* callback */
                                    NULL);
         }
     }
