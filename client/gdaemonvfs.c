@@ -1480,6 +1480,9 @@ g_daemon_vfs_local_file_removed (GVfs       *vfs,
                                      NULL,
                                      NULL, /* callback */
                                      NULL);
+          /* flush the call with the expense of sending all queued messages on the connection */
+          g_dbus_connection_flush_sync (g_dbus_proxy_get_connection (G_DBUS_PROXY (proxy)),
+                                        NULL, NULL);
         }
       
       meta_tree_unref (tree);
@@ -1525,6 +1528,9 @@ g_daemon_vfs_local_file_moved (GVfs       *vfs,
                                    NULL,
                                    NULL, /* callback */
                                    NULL);
+          /* flush the call with the expense of sending all queued messages on the connection */
+          g_dbus_connection_flush_sync (g_dbus_proxy_get_connection (G_DBUS_PROXY (proxy)),
+                                        NULL, NULL);
         }
     }
 
