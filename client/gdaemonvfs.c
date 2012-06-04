@@ -41,7 +41,6 @@
 #include "gvfsiconloadable.h"
 #include <glib/gi18n-lib.h>
 #include <glib/gstdio.h>
-#include <metadata-dbus.h>
 
 typedef struct  {
   char *type;
@@ -77,7 +76,9 @@ struct _GDaemonVfsClass
 G_DEFINE_DYNAMIC_TYPE (GDaemonVfs, g_daemon_vfs, G_TYPE_VFS)
 
 static GDaemonVfs *the_vfs = NULL;
-static GPrivate metadata_proxy = G_PRIVATE_INIT (g_object_unref);
+
+G_LOCK_DEFINE_STATIC (metadata_proxy);
+static GVfsMetadata *metadata_proxy = NULL;
 
 G_LOCK_DEFINE_STATIC(mount_cache);
 
@@ -1289,41 +1290,51 @@ metadata_daemon_vanished (GDBusConnection *connection,
 {
   guint *watcher_id = user_data;
 
-  g_private_replace (&metadata_proxy, NULL);
+  G_LOCK (metadata_proxy);
+  g_clear_object (&metadata_proxy);
+  G_UNLOCK (metadata_proxy);
+
   if (*watcher_id > 0)
     g_bus_unwatch_name (*watcher_id);
 }
 
-static GVfsMetadata *
-get_metadata_proxy (GError **error)
+GVfsMetadata *
+_g_daemon_vfs_get_metadata_proxy (GCancellable *cancellable, GError **error)
 {
   GVfsMetadata *proxy;
   guint *watcher_id;
 
-  proxy = g_private_get (&metadata_proxy);
-  if (proxy == NULL)
+  G_LOCK (metadata_proxy);
+
+  proxy = NULL;
+  if (metadata_proxy == NULL)
     {
-      proxy = gvfs_metadata_proxy_new_for_bus_sync (G_BUS_TYPE_SESSION,
-                                                    G_DBUS_PROXY_FLAGS_NONE,
-                                                    G_VFS_DBUS_METADATA_NAME,
-                                                    G_VFS_DBUS_METADATA_PATH,
-                                                    NULL,
-                                                    error);
-      g_private_replace (&metadata_proxy, proxy);
+      metadata_proxy = gvfs_metadata_proxy_new_for_bus_sync (G_BUS_TYPE_SESSION,
+                                                             G_DBUS_PROXY_FLAGS_NONE,
+                                                             G_VFS_DBUS_METADATA_NAME,
+                                                             G_VFS_DBUS_METADATA_PATH,
+                                                             cancellable,
+                                                             error);
 
-      if (proxy == NULL)
-        return NULL;
-
-      /* a place in memory to store the returned ID in */
-      watcher_id = g_malloc0 (sizeof (guint));
-      *watcher_id = g_bus_watch_name_on_connection (g_dbus_proxy_get_connection (G_DBUS_PROXY (proxy)),
-                                                    G_VFS_DBUS_METADATA_NAME,
-                                                    G_BUS_NAME_WATCHER_FLAGS_AUTO_START,
-                                                    NULL,
-                                                    metadata_daemon_vanished,
-                                                    watcher_id,
-                                                    g_free);
+      if (proxy != NULL)
+        {
+          /* a place in memory to store the returned ID in */
+          watcher_id = g_malloc0 (sizeof (guint));
+          *watcher_id = g_bus_watch_name_on_connection (g_dbus_proxy_get_connection (G_DBUS_PROXY (proxy)),
+                                                        G_VFS_DBUS_METADATA_NAME,
+                                                        G_BUS_NAME_WATCHER_FLAGS_AUTO_START,
+                                                        NULL,
+                                                        metadata_daemon_vanished,
+                                                        watcher_id,
+                                                        g_free);
+        }
     }
+
+  if (metadata_proxy != NULL)
+    /* take the reference so that we don't need to protect returned object against racy metadata_daemon_vanished() */
+    proxy = g_object_ref (metadata_proxy);
+
+  G_UNLOCK (metadata_proxy);
 
   return proxy;
 }
@@ -1380,7 +1391,7 @@ g_daemon_vfs_local_file_set_attributes (GVfs       *vfs,
 						FALSE,
 						&tree_path);
 	  
-	  proxy = get_metadata_proxy (error);
+	  proxy = _g_daemon_vfs_get_metadata_proxy (NULL, error);
 	  if (proxy == NULL)
 	    {
 	      res = FALSE;
@@ -1442,6 +1453,7 @@ g_daemon_vfs_local_file_set_attributes (GVfs       *vfs,
               meta_lookup_cache_free (cache);
               meta_tree_unref (tree);
               g_free (tree_path);
+              g_object_unref (proxy);
 	    }
 	}
 
@@ -1469,7 +1481,7 @@ g_daemon_vfs_local_file_removed (GVfs       *vfs,
 					&tree_path);
   if (tree)
     {
-      proxy = get_metadata_proxy (NULL);
+      proxy = _g_daemon_vfs_get_metadata_proxy (NULL, NULL);
       if (proxy)
         {
           metatreefile = meta_tree_get_filename (tree);
@@ -1483,6 +1495,7 @@ g_daemon_vfs_local_file_removed (GVfs       *vfs,
           /* flush the call with the expense of sending all queued messages on the connection */
           g_dbus_connection_flush_sync (g_dbus_proxy_get_connection (G_DBUS_PROXY (proxy)),
                                         NULL, NULL);
+          g_object_unref (proxy);
         }
       
       meta_tree_unref (tree);
@@ -1516,7 +1529,7 @@ g_daemon_vfs_local_file_moved (GVfs       *vfs,
 					 &tree_path2);
   if (tree1 && tree2 && tree1 == tree2)
     {
-      proxy = get_metadata_proxy (NULL);
+      proxy = _g_daemon_vfs_get_metadata_proxy (NULL, NULL);
       if (proxy)
         {
           metatreefile = meta_tree_get_filename (tree1);
@@ -1531,6 +1544,7 @@ g_daemon_vfs_local_file_moved (GVfs       *vfs,
           /* flush the call with the expense of sending all queued messages on the connection */
           g_dbus_connection_flush_sync (g_dbus_proxy_get_connection (G_DBUS_PROXY (proxy)),
                                         NULL, NULL);
+          g_object_unref (proxy);
         }
     }
 
